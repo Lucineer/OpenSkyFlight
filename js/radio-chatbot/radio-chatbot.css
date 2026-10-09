@@ -1,0 +1,272 @@
+/* Sitka Radio v1 — iPad-first radio chatbot styles.
+   44px+ touch targets, safe-area aware, dark radio theme. */
+
+.sitka-radio {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  width: min(340px, calc(100vw - 24px));
+  max-height: min(520px, calc(100dvh - 120px));
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 14, 22, 0.94);
+  border: 1px solid rgba(125, 249, 255, 0.25);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  color: #e8f4f8;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  font-size: 14px;
+  z-index: 9000;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.sr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(125, 249, 255, 0.08);
+  border-bottom: 1px solid rgba(125, 249, 255, 0.15);
+}
+
+.sr-title {
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 13px;
+  color: #7df9ff;
+}
+
+.sr-header-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.sr-icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: none;
+  color: #e8f4f8;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sr-icon-btn:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sr-transcript {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sr-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  line-height: 1.4;
+  animation: sr-fadein 0.25s ease-out;
+}
+
+@keyframes sr-fadein {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.sr-user {
+  background: rgba(125, 249, 255, 0.12);
+  align-self: flex-end;
+  max-width: 90%;
+}
+
+.sr-bot {
+  background: rgba(255, 255, 255, 0.06);
+  align-self: flex-start;
+  max-width: 92%;
+}
+
+.sr-copilot {
+  border-left: 3px solid #ffd166;
+}
+
+.sr-tower {
+  border-left: 3px solid #7df9ff;
+}
+
+.sr-who {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+.sr-copilot .sr-who { color: #ffd166; }
+.sr-tower .sr-who { color: #7df9ff; }
+.sr-user .sr-who { color: #7df9ff; }
+
+.sr-text-body {
+  word-wrap: break-word;
+}
+
+.sr-pending {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.sr-static {
+  animation: sr-shimmer 1.2s infinite;
+}
+
+@keyframes sr-shimmer {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.sr-feedback {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.sr-thumb {
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.sr-thumb:active {
+  transform: scale(0.92);
+}
+.sr-thumb.sr-voted {
+  opacity: 1;
+  border-color: #7df9ff;
+  background: rgba(125, 249, 255, 0.15);
+}
+
+.sr-locked {
+  font-size: 12px;
+  opacity: 0.5;
+  margin-left: auto;
+}
+
+.sr-controls {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(125, 249, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sr-waveform {
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.sr-ptt {
+  min-height: 64px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #e33, #b22);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.sr-ptt:active, .sr-ptt.sr-listening {
+  background: linear-gradient(180deg, #f44, #c33);
+  transform: scale(0.98);
+}
+.sr-ptt:disabled {
+  background: #555;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sr-text {
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8f4f8;
+  padding: 0 12px;
+  font-size: 15px;
+  outline: none;
+}
+.sr-text:focus {
+  border-color: #7df9ff;
+}
+.sr-text::placeholder {
+  color: rgba(232, 244, 248, 0.4);
+}
+
+.sr-footnote {
+  padding: 6px 12px 8px;
+  font-size: 10px;
+  opacity: 0.4;
+  text-align: center;
+}
+
+/* Collapsed badge */
+.sitka-radio-badge {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid rgba(125, 249, 255, 0.3);
+  background: rgba(10, 14, 22, 0.94);
+  font-size: 26px;
+  cursor: pointer;
+  z-index: 9000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sitka-radio-badge:active {
+  transform: scale(0.94);
+}
+
+/* Hide when radio panel is open */
+.sitka-radio-badge[hidden] {
+  display: none;
+}
+.sitka-radio[hidden] {
+  display: none;
+}
+
+/* Landscape / small height: shrink transcript */
+@media (max-height: 500px) {
+  .sitka-radio {
+    max-height: calc(100dvh - 24px);
+  }
+  .sr-transcript {
+    min-height: 80px;
+  }
+}
