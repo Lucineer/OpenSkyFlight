@@ -178,6 +178,7 @@ export class RadioChatbot {
     this.recognition.maxAlternatives = 1;
 
     let finalTranscript = '';
+    let lastInterim = '';
     let gotResult = false;
     let listenTimeout = null;
 
@@ -197,6 +198,7 @@ export class RadioChatbot {
         if (r.isFinal) finalTranscript += r[0].transcript;
         else interim += r[0].transcript;
       }
+      if (interim) lastInterim = interim;
       this.drawWaveform(true);
       this.pttButton.textContent = interim ? `🎙 "${interim.slice(0, 24)}…"` : '🎙 LISTENING…';
     };
@@ -217,8 +219,10 @@ export class RadioChatbot {
       clearTimeout(listenTimeout);
       const wasListening = this.listening;
       this.stopListening();
-      if (wasListening && finalTranscript.trim()) {
-        this.handleUserInput(finalTranscript.trim());
+      // Use final transcript, fall back to last interim (iOS often never marks final)
+      const text = finalTranscript.trim() || lastInterim.trim();
+      if (wasListening && text) {
+        this.handleUserInput(text);
       } else if (wasListening && !gotResult) {
         // onend with no result at all = silent iOS failure, timeout already handles messaging
       } else if (wasListening) {
