@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Sitka Radio — v1 Prototype Test</title>
+<link rel="stylesheet" href="radio-chatbot.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    background: linear-gradient(180deg, #0a1628 0%, #0d2137 50%, #081018 100%);
+    color: #e8f4f8;
+    min-height: 100dvh;
+    padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+  }
+  .test-header {
+    max-width: 600px;
+    margin: 0 auto 20px;
+    text-align: center;
+  }
+  .test-header h1 { font-size: 24px; margin-bottom: 8px; }
+  .test-header p { opacity: 0.7; font-size: 14px; line-height: 1.5; }
+  .test-panel {
+    max-width: 600px;
+    margin: 0 auto;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(125,249,255,0.15);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .test-panel h2 { font-size: 16px; margin-bottom: 12px; color: #7df9ff; }
+  .test-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .test-row label { font-size: 13px; opacity: 0.8; min-width: 90px; }
+  .test-row input[type="number"], .test-row input[type="text"] {
+    min-height: 44px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    color: #e8f4f8;
+    padding: 0 10px;
+    font-size: 15px;
+    width: 100px;
+  }
+  .test-row input[type="text"] { width: 140px; }
+  .test-btn {
+    min-height: 44px;
+    padding: 0 16px;
+    background: rgba(125,249,255,0.15);
+    border: 1px solid rgba(125,249,255,0.3);
+    border-radius: 8px;
+    color: #7df9ff;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .test-btn:active { background: rgba(125,249,255,0.25); }
+  .test-status {
+    margin-top: 12px;
+    padding: 10px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: ui-monospace, monospace;
+    line-height: 1.6;
+  }
+  .test-status .ok { color: #7f7; }
+  .test-status .no { color: #f77; }
+  .test-try {
+    margin-top: 16px;
+  }
+  .test-try h2 { font-size: 16px; margin-bottom: 8px; color: #ffd166; }
+  .try-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .try-chip {
+    min-height: 44px;
+    padding: 0 14px;
+    background: rgba(255,209,102,0.1);
+    border: 1px solid rgba(255,209,102,0.3);
+    border-radius: 20px;
+    color: #ffd166;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .try-chip:active { background: rgba(255,209,102,0.2); }
+</style>
+</head>
+<body>
+
+<div class="test-header">
+  <h1>📻 Sitka Radio — v1 Prototype</h1>
+  <p>Standalone test page. The radio panel is in the bottom-right corner.<br>
+  Hold 🎙 to talk (iPad Safari) or type below. Thumbs up/down feeds localStorage.</p>
+</div>
+
+<div class="test-panel">
+  <h2>🎮 Simulated Game State</h2>
+  <p style="font-size:12px; opacity:0.6; margin-bottom:12px;">These values fill the {alt}, {speed}, {dist} slots in responses.</p>
+  <div class="test-row">
+    <label>Altitude (ft)</label><input type="number" id="sim-alt" value="1200">
+    <label>Speed (kt)</label><input type="number" id="sim-speed" value="95">
+  </div>
+  <div class="test-row">
+    <label>Dist (mi)</label><input type="number" id="sim-dist" value="3">
+    <label>Direction</label><input type="text" id="sim-dir" value="east">
+  </div>
+  <div class="test-row">
+    <button class="test-btn" id="sim-apply">Apply to Radio</button>
+    <button class="test-btn" id="sim-feedback">Show Feedback Stats</button>
+  </div>
+  <div class="test-status" id="test-status">Status: initializing…</div>
+</div>
+
+<div class="test-panel test-try">
+  <h2>💡 Try saying…</h2>
+  <div class="try-chips" id="try-chips"></div>
+</div>
+
+<script type="module">
+  import { RadioChatbot } from './radio-chatbot.js';
+  import { setGameState } from './responses.js';
+
+  const radio = new RadioChatbot(document.body);
+  radio.mount();
+
+  const statusEl = document.getElementById('test-status');
+
+  function updateStatus() {
+    const sr = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const tts = 'speechSynthesis' in window;
+    statusEl.innerHTML =
+      `Voice input: <span class="${sr ? 'ok' : 'no'}">${sr ? 'SUPPORTED' : 'NOT SUPPORTED (text only)'}</span><br>` +
+      `Voice output: <span class="${tts ? 'ok' : 'no'}">${tts ? 'SUPPORTED' : 'NOT SUPPORTED'}</span><br>` +
+      `HTTPS: <span class="ok">${location.protocol === 'https:' ? 'YES' : 'NO (mic needs HTTPS)'}</span>`;
+  }
+  updateStatus();
+
+  // Sim state
+  document.getElementById('sim-apply').addEventListener('click', () => {
+    setGameState({
+      alt: parseFloat(document.getElementById('sim-alt').value) || 1200,
+      speed: parseFloat(document.getElementById('sim-speed').value) || 95,
+      dist: parseFloat(document.getElementById('sim-dist').value) || 3,
+      dir: document.getElementById('sim-dir').value || 'east',
+    });
+    statusEl.innerHTML += '<br><span class="ok">Game state updated.</span>';
+  });
+
+  document.getElementById('sim-feedback').addEventListener('click', () => {
+    const stats = radio.getFeedbackStats();
+    const lines = Object.entries(stats).map(([intent, s]) =>
+      `${intent}: 👍${s.up} 👎${s.down}`);
+    statusEl.innerHTML = lines.length
+      ? lines.join('<br>')
+      : 'No feedback yet — rate some responses!';
+  });
+
+  // Try chips — click to send as if typed
+  const phrases = [
+    'where am I?', "what's that mountain?", 'tell me a joke',
+    "how's the weather?", 'help me land', 'checklist',
+    'any whales?', 'hello', 'who are you?', 'help',
+  ];
+  const chipsEl = document.getElementById('try-chips');
+  phrases.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'try-chip';
+    b.textContent = p;
+    b.addEventListener('click', () => radio.handleUserInput(p));
+    chipsEl.appendChild(b);
+  });
+</script>
+
+</body>
+</html>
