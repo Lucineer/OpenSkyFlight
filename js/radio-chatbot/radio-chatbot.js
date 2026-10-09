@@ -171,12 +171,26 @@ export class RadioChatbot {
     // Recreate per use (iOS quirk: reuse causes stale results)
     this.recognition = new this.SRClass();
     this.recognition.lang = 'en-US';
-    this.recognition.interimResults = true;
+    // iOS Safari is flaky with interimResults=true — use false for reliability
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    this.recognition.interimResults = !isIOS;
+    this.recognition.continuous = false;
     this.recognition.maxAlternatives = 1;
 
     let finalTranscript = '';
+    let gotResult = false;
+    let listenTimeout = null;
+
+    // Safety timeout: if iOS silently fails, don't hang on "LISTENING…"
+    listenTimeout = setTimeout(() => {
+      if (this.listening && !gotResult) {
+        this.stopListening();
+        this.addBotMessage('CO-PILOT', "Voice isn't cooperating on this device — type below and I'll answer the same way.");
+      }
+    }, 12000);
 
     this.recognition.onresult = (event) => {
+      gotResult = true;
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const r = event.results[i];
@@ -188,17 +202,25 @@ export class RadioChatbot {
     };
 
     this.recognition.onerror = (event) => {
+      clearTimeout(listenTimeout);
       this.stopListening();
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         this.addBotMessage('CO-PILOT', "Mic access was blocked — no worries, type instead and I'll still answer.");
+      } else if (event.error === 'no-speech' || event.error === 'aborted') {
+        this.addBotMessage('CO-PILOT', "Didn't hear anything — try holding the button while you talk, or type below.");
+      } else {
+        this.addBotMessage('CO-PILOT', "Voice hiccup — type it below and I'll answer.");
       }
     };
 
     this.recognition.onend = () => {
+      clearTimeout(listenTimeout);
       const wasListening = this.listening;
       this.stopListening();
       if (wasListening && finalTranscript.trim()) {
         this.handleUserInput(finalTranscript.trim());
+      } else if (wasListening && !gotResult) {
+        // onend with no result at all = silent iOS failure, timeout already handles messaging
       } else if (wasListening) {
         this.addBotMessage('CO-PILOT', "Didn't catch that — try again or type it below.");
       }
