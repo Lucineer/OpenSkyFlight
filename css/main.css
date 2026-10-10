@@ -128,19 +128,51 @@ canvas {
 }
 
 /* ── Panel Trigger Zone ── */
+/* Pulled from super (SUGGESTIONS/03-panel-drawer-fix.md): the trigger was an
+   invisible 20px strip under the minimap (z-index), eating taps. On touch
+   there is no keyboard workaround, so the drawer was unreachable on iPad.
+   Fix: 44px transparent hit area via ::before, visible grip handle via
+   ::after, z-index above the minimap. */
 #panel-trigger {
   position: fixed;
   top: 0;
   right: 0;
   width: 20px;
   height: 100%;
-  z-index: var(--z-trigger);
+  z-index: 22; /* above minimap (20) so taps land here */
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Transparent 44px hit area — meets Apple/Google touch target minimum */
+#panel-trigger::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 100%;
+  background: transparent;
+}
+/* Visible grip handle so users can find it */
+#panel-trigger::after {
+  content: '\2039'; /* ‹ — points at the panel it opens */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(0, 255, 136, 0.7);
+  font-size: 14px;
+  line-height: 1;
+  pointer-events: none;
 }
 
 /* Touch: keep the trigger tappable above the open panel */
 body.touch #panel-trigger {
   width: 28px;
-  z-index: 21;
+  z-index: 22;
+}
+body.touch #panel-trigger::after {
+  font-size: 18px;
 }
 
 /* ── Boot overlay (loading + fatal-error screen) ── */
