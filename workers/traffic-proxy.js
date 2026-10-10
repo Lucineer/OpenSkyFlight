@@ -63,10 +63,13 @@ export default {
     // Try upstreams in order
     for (const up of UPSTREAMS) {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(up.url(lat, lon, dist), {
           headers: { 'User-Agent': UA },
-          signal: AbortSignal.timeout(8000),
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         if (res.ok) {
           const data = await res.json();
           return new Response(JSON.stringify(data), {
