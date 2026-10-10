@@ -28,6 +28,7 @@ import BenchmarkComparator from './benchmark/BenchmarkComparator.js';
 import GPUTimer from './benchmark/GPUTimer.js';
 import AircraftManager from './aircraft/AircraftManager.js';
 import ChaseCameraController from './camera/ChaseCameraController.js';
+import LiveTraffic from './traffic/LiveTraffic.js';
 import FlightPlanRecorder from './flightplan/FlightPlanRecorder.js';
 import Stats from 'stats.js';
 import { detectTileMode, getTileMode } from './geo/TileUrls.js';
@@ -275,6 +276,33 @@ async function initApp() {
   }
   // Side-effect: binds DOM controls to CONFIG
   new ControlPanel(regenerate);
+
+  // --- Live Traffic (real ADS-B aircraft) ---
+  // ?traffic=mock for testing without the Worker proxy
+  const _trafficMock = (() => {
+    try { return new URLSearchParams(location.search).get('traffic') === 'mock'; }
+    catch { return false; }
+  })();
+  const liveTraffic = new LiveTraffic(scene, geoTerrainManager, {
+    useMock: _trafficMock,
+    workerUrl: 'https://traffic.lucineer.com/api/traffic',
+  });
+  liveTraffic.setCamera(camera);
+  liveTraffic.start();
+  Logger.info('App', `Live traffic ${liveTraffic.enabled ? 'enabled' : 'disabled'}${_trafficMock ? ' (mock mode)' : ''}`);
+
+  // Floating toggle button for live traffic (44px touch target)
+  const _trafficBtn = document.createElement('button');
+  _trafficBtn.id = 'traffic-toggle';
+  _trafficBtn.textContent = '✈️ Traffic: ON';
+  _trafficBtn.style.cssText = 'position:fixed;bottom:80px;right:12px;z-index:50;min-width:44px;min-height:44px;padding:10px 14px;border-radius:12px;border:1px solid rgba(125,249,255,0.4);background:rgba(0,20,40,0.75);color:#7df9ff;font-size:14px;font-weight:bold;cursor:pointer;backdrop-filter:blur(4px);';
+  _trafficBtn.addEventListener('click', () => {
+    const on = !liveTraffic.enabled;
+    liveTraffic.setEnabled(on);
+    _trafficBtn.textContent = on ? '✈️ Traffic: ON' : '✈️ Traffic: OFF';
+    Logger.info('App', `Live traffic ${on ? 'enabled' : 'disabled'} by user`);
+  });
+  document.body.appendChild(_trafficBtn);
 
   // --- Logger panel ---
   Logger.bindPanel(document.getElementById('log-panel'));
@@ -528,6 +556,7 @@ async function initApp() {
 
     // --- Input phase ---
     flightController.update(dt);
+    liveTraffic.tick(dt);
     benchmarkRunner.tickPath(dt, flightController, renderer);
 
     // --- Aircraft state ---
