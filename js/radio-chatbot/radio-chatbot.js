@@ -60,13 +60,17 @@ export class RadioChatbot {
   loadFeedback() {
     try {
       return JSON.parse(localStorage.getItem(FEEDBACK_KEY) || '{}');
-    } catch { return {}; }
+    } catch {
+      return {};
+    }
   }
 
   saveFeedback() {
     try {
       localStorage.setItem(FEEDBACK_KEY, JSON.stringify(this.feedback));
-    } catch { /* private mode */ }
+    } catch {
+      /* private mode */
+    }
   }
 
   // ------------------------------------------------------------------
@@ -111,7 +115,7 @@ export class RadioChatbot {
     this.container.appendChild(this.badge);
 
     this.wireEvents();
-    this.addBotMessage('CO-PILOT', "Sitka Radio online. Hold the mic to talk, or type below.");
+    this.addBotMessage('CO-PILOT', 'Sitka Radio online. Hold the mic to talk, or type below.');
     this.primeSpeech();
   }
 
@@ -186,7 +190,10 @@ export class RadioChatbot {
     listenTimeout = setTimeout(() => {
       if (this.listening && !gotResult) {
         this.stopListening();
-        this.addBotMessage('CO-PILOT', "Voice isn't cooperating on this device — type below and I'll answer the same way.");
+        this.addBotMessage(
+          'CO-PILOT',
+          "Voice isn't cooperating on this device — type below and I'll answer the same way.",
+        );
       }
     }, 12000);
 
@@ -243,7 +250,11 @@ export class RadioChatbot {
 
   stopListening() {
     if (this.recognition) {
-      try { this.recognition.stop(); } catch { /* already stopped */ }
+      try {
+        this.recognition.stop();
+      } catch {
+        /* already stopped */
+      }
       this.recognition = null;
     }
     this.listening = false;
@@ -282,7 +293,9 @@ export class RadioChatbot {
       u.volume = 0;
       window.speechSynthesis.speak(u);
       this.voicesReady = true;
-    } catch { /* unsupported */ }
+    } catch {
+      /* unsupported */
+    }
   }
 
   speak(text, responder) {
@@ -294,11 +307,14 @@ export class RadioChatbot {
       u.pitch = responder === 'TOWER' ? 0.85 : 1.05;
       // Prefer a clear system voice if available
       const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
-        || voices.find(v => v.lang === 'en-US');
+      const preferred =
+        voices.find((v) => v.lang.startsWith('en') && v.name.includes('Samantha')) ||
+        voices.find((v) => v.lang === 'en-US');
       if (preferred) u.voice = preferred;
       window.speechSynthesis.speak(u);
-    } catch { /* TTS failed silently */ }
+    } catch {
+      /* TTS failed silently */
+    }
   }
 
   // ------------------------------------------------------------------
@@ -337,12 +353,12 @@ export class RadioChatbot {
     `;
     el.querySelector('.sr-text-body').textContent = `"${text}"`;
 
-    el.querySelectorAll('.sr-thumb').forEach(btn => {
+    el.querySelectorAll('.sr-thumb').forEach((btn) => {
       btn.addEventListener('click', () => {
         const vote = btn.dataset.vote;
         this.recordFeedback(msgId, meta.intent || 'unknown', text, vote);
         // Visual confirmation
-        el.querySelectorAll('.sr-thumb').forEach(b => b.classList.remove('sr-voted'));
+        el.querySelectorAll('.sr-thumb').forEach((b) => b.classList.remove('sr-voted'));
         btn.classList.add('sr-voted');
       });
     });
