@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { CONFIG, onChange, update } from './utils/config.js';
+import { CLOUD_RENDER_ORDER, REALWORLD_FAR_PLANE, CLIP_PLANE_EPSILON } from './constants/rendering.js';
 import {
-  CLOUD_RENDER_ORDER,
-  REALWORLD_FAR_PLANE,
-  CLIP_PLANE_EPSILON,
-} from './constants/rendering.js';
-import { REALWORLD_START_ALTITUDE, DEFAULT_NEAR, MAX_ROLL, ROLL_SENSITIVITY, ROLL_DAMP_SPEED } from './constants/camera.js';
+  REALWORLD_START_ALTITUDE,
+  DEFAULT_NEAR,
+  MAX_ROLL,
+  ROLL_SENSITIVITY,
+  ROLL_DAMP_SPEED,
+} from './constants/camera.js';
 import { MAX_DELTA_TIME } from './constants/physics.js';
 import { createRenderer, createScene, createCamera, setupResizeHandler } from './scene/SceneSetup.js';
 import AdaptiveQualityManager from './rendering/AdaptiveQualityManager.js';
@@ -45,7 +47,8 @@ async function initApp() {
     createRenderer(),
     new Promise((_, reject) =>
       setTimeout(
-        () => reject(new Error('Renderer init timed out after 30s — this browser did not provide a usable GPU context.')),
+        () =>
+          reject(new Error('Renderer init timed out after 30s — this browser did not provide a usable GPU context.')),
         30000,
       ),
     ),
@@ -82,13 +85,14 @@ async function initApp() {
     const params = new URLSearchParams(location.search);
     const plat = parseFloat(params.get('lat'));
     const plon = parseFloat(params.get('lon'));
-    if (Number.isFinite(plat) && Number.isFinite(plon) &&
-        Math.abs(plat) <= 90 && Math.abs(plon) <= 180) {
+    if (Number.isFinite(plat) && Number.isFinite(plon) && Math.abs(plat) <= 90 && Math.abs(plon) <= 180) {
       CONFIG.lat = plat;
       CONFIG.lon = plon;
       Logger.info('App', `Start location from URL: ${plat}, ${plon}`);
     }
-  } catch { /* non-browser context — keep CONFIG defaults */ }
+  } catch {
+    /* non-browser context — keep CONFIG defaults */
+  }
   geoTerrainManager.init(CONFIG.lat, CONFIG.lon);
 
   // --- Controllers ---
@@ -180,9 +184,9 @@ async function initApp() {
   // When starting at the default location (Sitka Airport, no ?lat/?lon override),
   // open with a takeoff roll: spawn low near the airport facing west over the
   // water, throttle up, rotate, and climb. Any stick/throttle input skips it.
-  const SITKA_LAT = 57.0472, SITKA_LON = -135.3619;
-  const isDefaultStart = Math.abs(CONFIG.lat - SITKA_LAT) < 1e-9 &&
-                         Math.abs(CONFIG.lon - SITKA_LON) < 1e-9;
+  const SITKA_LAT = 57.0472,
+    SITKA_LON = -135.3619;
+  const isDefaultStart = Math.abs(CONFIG.lat - SITKA_LAT) < 1e-9 && Math.abs(CONFIG.lon - SITKA_LON) < 1e-9;
   let takeoffT = -1; // -1 = no intro; -2 = armed, waiting for tiles; >=0 = wall-clock start timestamp (ms)
   let _introLastThrottle = 0;
   if (isDefaultStart) {
@@ -202,8 +206,11 @@ async function initApp() {
     Logger.info('App', 'Takeoff intro armed: departing Sitka Airport');
   }
   const dbgParams = (() => {
-    try { return new URLSearchParams(location.search); }
-    catch { return new URLSearchParams(); }
+    try {
+      return new URLSearchParams(location.search);
+    } catch {
+      return new URLSearchParams();
+    }
   })();
   if (dbgParams.has('debug')) {
     window.__osf = {
@@ -227,7 +234,9 @@ async function initApp() {
   try {
     const _pp = new URLSearchParams(location.search).get('plane');
     if (_pp && /^[a-z0-9]+$/.test(_pp)) _planeType = _pp;
-  } catch { /* non-browser */ }
+  } catch {
+    /* non-browser */
+  }
   try {
     selectedPlaneDef = await aircraftManager.loadPlane(_planeType);
     CONFIG.cameraSpeed = Math.round(2400 * (selectedPlaneDef.speed || 1));
@@ -280,8 +289,11 @@ async function initApp() {
   // --- Live Traffic (real ADS-B aircraft) ---
   // ?traffic=mock for testing without the Worker proxy
   const _trafficMock = (() => {
-    try { return new URLSearchParams(location.search).get('traffic') === 'mock'; }
-    catch { return false; }
+    try {
+      return new URLSearchParams(location.search).get('traffic') === 'mock';
+    } catch {
+      return false;
+    }
   })();
   const liveTraffic = new LiveTraffic(scene, geoTerrainManager, {
     useMock: _trafficMock,
@@ -289,13 +301,17 @@ async function initApp() {
   });
   liveTraffic.setCamera(camera);
   liveTraffic.start();
-  Logger.info('App', `Live traffic ${liveTraffic.enabled ? 'enabled' : 'disabled'}${_trafficMock ? ' (mock mode)' : ''}`);
+  Logger.info(
+    'App',
+    `Live traffic ${liveTraffic.enabled ? 'enabled' : 'disabled'}${_trafficMock ? ' (mock mode)' : ''}`,
+  );
 
   // Floating toggle button for live traffic (44px touch target)
   const _trafficBtn = document.createElement('button');
   _trafficBtn.id = 'traffic-toggle';
   _trafficBtn.textContent = '✈️ Traffic: ON';
-  _trafficBtn.style.cssText = 'position:fixed;bottom:80px;right:12px;z-index:50;min-width:44px;min-height:44px;padding:10px 14px;border-radius:12px;border:1px solid rgba(125,249,255,0.4);background:rgba(0,20,40,0.75);color:#7df9ff;font-size:14px;font-weight:bold;cursor:pointer;backdrop-filter:blur(4px);';
+  _trafficBtn.style.cssText =
+    'position:fixed;bottom:80px;right:12px;z-index:50;min-width:44px;min-height:44px;padding:10px 14px;border-radius:12px;border:1px solid rgba(125,249,255,0.4);background:rgba(0,20,40,0.75);color:#7df9ff;font-size:14px;font-weight:bold;cursor:pointer;backdrop-filter:blur(4px);';
   _trafficBtn.addEventListener('click', () => {
     const on = !liveTraffic.enabled;
     liveTraffic.setEnabled(on);
@@ -528,8 +544,8 @@ async function initApp() {
     // --- Takeoff intro: scripted throttle/pitch, interruptible ---
     // Uses wall-clock time (not dt) so the 22s sequence runs in 22s even at low FPS.
     if (takeoffT >= 0) {
-      const stickActive = Math.abs(flightController.touchMove.x) > 0.05 ||
-                          Math.abs(flightController.touchMove.y) > 0.05;
+      const stickActive =
+        Math.abs(flightController.touchMove.x) > 0.05 || Math.abs(flightController.touchMove.y) > 0.05;
       const throttleTouched = Math.abs(flightController.throttle - _introLastThrottle) > 0.02;
       if (stickActive || throttleTouched) {
         takeoffT = -1; // player took over
@@ -608,8 +624,7 @@ async function initApp() {
 
     // --- Bank roll (derived from yawRate, single source of truth) ---
     if (aircraftState) {
-      const targetRoll = Math.max(-MAX_ROLL, Math.min(MAX_ROLL,
-        aircraftState.yawRate * ROLL_SENSITIVITY));
+      const targetRoll = Math.max(-MAX_ROLL, Math.min(MAX_ROLL, aircraftState.yawRate * ROLL_SENSITIVITY));
       _bankRoll += (targetRoll - _bankRoll) * ROLL_DAMP_SPEED * dt;
       aircraftState.roll = _bankRoll;
     }
@@ -631,15 +646,14 @@ async function initApp() {
     if (crashGraceT > 0) crashGraceT -= dt;
     _bombUpdate(dt); // update falling bombs
     if (crashing) {
-      crashFX.update(dt, flightController,
-        (x, z) => geoTerrainManager.getGroundElevation(x, z));
+      crashFX.update(dt, flightController, (x, z) => geoTerrainManager.getGroundElevation(x, z));
     } else if (manualFlight && crashGraceT <= 0 && dt > 0) {
       _crashFwd.set(0, 0, -1).applyQuaternion(flightController.quaternion);
-      const gndBelow = geoTerrainManager.getGroundElevation(
-        flightController.position.x, flightController.position.z);
+      const gndBelow = geoTerrainManager.getGroundElevation(flightController.position.x, flightController.position.z);
       const gndAhead = geoTerrainManager.getGroundElevation(
         flightController.position.x + _crashFwd.x * CRASH_LOOKAHEAD_M,
-        flightController.position.z + _crashFwd.z * CRASH_LOOKAHEAD_M);
+        flightController.position.z + _crashFwd.z * CRASH_LOOKAHEAD_M,
+      );
       // Over water the DEM returns seafloor depth (e.g. -4586m), not sea level.
       // Trigger the splash at the visual water surface (~0m), not the seafloor.
       // Use the visual surface: max(terrain, sea level) — if either sample is
@@ -650,16 +664,12 @@ async function initApp() {
       const triggerAlt = Math.max(surfaceBelow, surfaceAhead) + CRASH_GROUND_PAD_M;
       if (flightController.position.y < triggerAlt) {
         crashing = true;
-        _impactVel.set(
-          _crashFwd.x * _horizSpeed,
-          _vertSpeed,
-          _crashFwd.z * _horizSpeed);
+        _impactVel.set(_crashFwd.x * _horizSpeed, _vertSpeed, _crashFwd.z * _horizSpeed);
         flightController.enabled = false;
         flightController.yawRate = 0;
         flightController.pitchRate = 0;
         const type = classifyCrash(aircraftState.roll, gndBelow, gndAhead);
-        crashFX.startCrash(type, flightController,
-          (x, z) => geoTerrainManager.getGroundElevation(x, z), _impactVel);
+        crashFX.startCrash(type, flightController, (x, z) => geoTerrainManager.getGroundElevation(x, z), _impactVel);
       }
     }
 
@@ -756,11 +766,15 @@ async function initApp() {
         if (takeoffT === -2) {
           // Nudge spawn to land if we're over water: search east toward the island
           const gndHere = geoTerrainManager.getGroundElevation(
-            flightController.position.x, flightController.position.z);
+            flightController.position.x,
+            flightController.position.z,
+          );
           if (gndHere <= 10) {
             for (let d = 500; d <= 5000; d += 500) {
               const g = geoTerrainManager.getGroundElevation(
-                flightController.position.x + d, flightController.position.z);
+                flightController.position.x + d,
+                flightController.position.z,
+              );
               if (g > 10) {
                 flightController.position.x += d;
                 flightController.position.y = g + 25;
@@ -807,7 +821,8 @@ initApp().catch((err) => {
     status.textContent = 'Could not start the 3D engine on this device.';
     errBox.style.display = 'block';
     errBox.textContent =
-      'Details: ' + String((err && err.message) || err) +
+      'Details: ' +
+      String((err && err.message) || err) +
       '\n\nTry ?renderer=webgl for the WebGL fallback, or a browser with WebGPU support.';
   }
 });
