@@ -5,10 +5,14 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/serve.js",
-    "lint": "eslint js/",
-    "lint:fix": "eslint js/ --fix",
-    "format": "prettier --write \"js/**/*.js\" \"*.js\" \"scripts/**/*.js\"",
-    "format:check": "prettier --check \"js/**/*.js\" \"*.js\" \"scripts/**/*.js\""
+    "lint": "eslint js/ games/ scripts/",
+    "lint:fix": "eslint js/ games/ scripts/ --fix",
+    "format": "prettier --write \"js/**/*.js\" \"games/**/*.js\" \"*.js\" \"scripts/**/*.js\"",
+    "format:check": "prettier --check \"js/**/*.js\" \"games/**/*.js\" \"*.js\" \"scripts/**/*.js\"",
+    "check:imports": "node scripts/check-imports.mjs",
+    "check:diagnostics": "node scripts/check-diagnostics.mjs",
+    "check:runtime-deps": "node scripts/check-runtime-deps.mjs",
+    "ci": "npm run lint && npm run format:check && npm run check:imports && npm run check:diagnostics && npm run check:runtime-deps"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
