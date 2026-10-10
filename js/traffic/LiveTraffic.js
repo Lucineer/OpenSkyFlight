@@ -123,7 +123,7 @@ export default class LiveTraffic {
     this.planes = new Map();      // hex -> entry
     this.enabled = options.enabled !== false;
     this.useMock = options.useMock || false;
-    this.workerUrl = options.workerUrl || 'http://157.137.189.1:8080/api/traffic';
+    this.workerUrl = options.workerUrl || 'https://traffic.lucineer.com/api/traffic';
     this._timer = null;
     this._labels = new Map();
   }
