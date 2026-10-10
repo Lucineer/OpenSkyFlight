@@ -69,11 +69,7 @@ const waterNormalHeight = Fn(([p, t]) => {
   for (const w of WAVES) {
     const k = float((Math.PI * 2) / w.len);
     const omega = float(Math.sqrt(9.81 * ((Math.PI * 2) / w.len)));
-    const phase = p.x
-      .mul(w.dx)
-      .add(p.y.mul(w.dz))
-      .mul(k)
-      .add(t.mul(omega));
+    const phase = p.x.mul(w.dx).add(p.y.mul(w.dz)).mul(k).add(t.mul(omega));
     const s = sin(phase);
     const c = cos(phase);
     h = h.add(s.mul(w.amp));
