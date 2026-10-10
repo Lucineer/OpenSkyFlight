@@ -264,7 +264,10 @@ async function main() {
       let points = 0;
       const notes = [];
       const pops = []; // scored events for staggered popups
-      const scored = (label, pts) => { notes.push(label); if (pts > 0) pops.push({ label, pts }); };
+      const scored = (label, pts) => {
+        notes.push(label);
+        if (pts > 0) pops.push({ label, pts });
+      };
       if (sink <= LAND.TOUCHDOWN_SINK) {
         points += 40;
         scored('GREASED IT', 40);
@@ -305,10 +308,9 @@ async function main() {
       setHud('hud-best', `BEST ${isBest ? points : (G.best ?? '—')}`);
       setHud('hud-score', `SCORE ${points}`);
       // Staggered score-breakdown popups, 0.35s apart.
-      pops.forEach((p, i) => setTimeout(
-        () => showPopup(`+${p.pts} ${p.label}`, '50%', `${30 + i * 7}%`, '#7cfc00'),
-        500 + i * 350
-      ));
+      pops.forEach((p, i) =>
+        setTimeout(() => showPopup(`+${p.pts} ${p.label}`, '50%', `${30 + i * 7}%`, '#7cfc00'), 500 + i * 350),
+      );
       // Show restart button
       const restartBtn = document.getElementById('btn-restart');
       if (restartBtn) {
