@@ -110,7 +110,8 @@ runGame({
     if (ctx.next < ctx.tests.length) {
       const dist = ctx.tests[ctx.next].distance(ctx.flight.position);
       if (el) el.style.width = `${Math.max(0, 100 - Math.min(100, dist / 3))}%`;
-      if (d) d.textContent = `${Math.round(dist)} m to gate ${ctx.next + 1} — ${Math.max(0, ctx.timeLeft).toFixed(1)}s left`;
+      if (d)
+        d.textContent = `${Math.round(dist)} m to gate ${ctx.next + 1} — ${Math.max(0, ctx.timeLeft).toFixed(1)}s left`;
     } else if (el) el.style.width = '100%';
   },
 
