@@ -27,7 +27,17 @@ export default class AtmosphericSky {
 
     // React to config changes
     this._unsub = onChange((key) => {
-      if (['sunElevation', 'sunAzimuth', 'skyTurbidity', 'skyRayleigh', 'fogEnabled', 'fogDensity', 'textureMode'].includes(key)) {
+      if (
+        [
+          'sunElevation',
+          'sunAzimuth',
+          'skyTurbidity',
+          'skyRayleigh',
+          'fogEnabled',
+          'fogDensity',
+          'textureMode',
+        ].includes(key)
+      ) {
         this._updateSky();
       }
     });
