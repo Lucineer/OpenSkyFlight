@@ -270,11 +270,7 @@ export default class HUDRenderer {
     ctx.fillText('ALT m', x, cy - INSTRUMENT_SCALE_HEIGHT / 2 - 14);
 
     ctx.font = 'bold 13px Courier New';
-    ctx.fillText(
-      'AGL ' + Math.round(Math.max(0, agl)) + ' m',
-      x - 10,
-      cy + INSTRUMENT_SCALE_HEIGHT / 2 + 20,
-    );
+    ctx.fillText('AGL ' + Math.round(Math.max(0, agl)) + ' m', x - 10, cy + INSTRUMENT_SCALE_HEIGHT / 2 + 20);
 
     ctx.restore();
   }
