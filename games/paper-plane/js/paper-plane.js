@@ -217,29 +217,33 @@ function _buildPaperPlane() {
   });
   // Center crease body (nose at -z).
   const body = new THREE.BufferGeometry();
-  body.setAttribute('position', new THREE.Float32BufferAttribute([
-    0, 0.15, -2.2,   // nose
-    -0.06, 0.32, 1.6, // tail top
-    0.06, 0.32, 1.6,
-  ], 3));
+  body.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(
+      [
+        0,
+        0.15,
+        -2.2, // nose
+        -0.06,
+        0.32,
+        1.6, // tail top
+        0.06,
+        0.32,
+        1.6,
+      ],
+      3,
+    ),
+  );
   body.computeVertexNormals();
   g.add(new THREE.Mesh(body, mat));
   // Left wing.
   const wl = new THREE.BufferGeometry();
-  wl.setAttribute('position', new THREE.Float32BufferAttribute([
-    0, 0.15, -2.2,
-    0, 0.32, 1.6,
-    -2.6, 0.55, 1.2,
-  ], 3));
+  wl.setAttribute('position', new THREE.Float32BufferAttribute([0, 0.15, -2.2, 0, 0.32, 1.6, -2.6, 0.55, 1.2], 3));
   wl.computeVertexNormals();
   g.add(new THREE.Mesh(wl, mat));
   // Right wing (mirror).
   const wr = new THREE.BufferGeometry();
-  wr.setAttribute('position', new THREE.Float32BufferAttribute([
-    0, 0.15, -2.2,
-    2.6, 0.55, 1.2,
-    0, 0.32, 1.6,
-  ], 3));
+  wr.setAttribute('position', new THREE.Float32BufferAttribute([0, 0.15, -2.2, 2.6, 0.55, 1.2, 0, 0.32, 1.6], 3));
   wr.computeVertexNormals();
   g.add(new THREE.Mesh(wr, mat));
   // Letter tucked under the wing.
@@ -298,11 +302,7 @@ function _windowWorldPos(b, floor, col, base) {
 function _hitBuilding(p, buildings, base) {
   for (const b of buildings) {
     const by = base ?? 0;
-    if (
-      Math.abs(p.x - b.x) < b.w / 2 + 1 &&
-      Math.abs(p.z - b.z) < b.d / 2 + 1 &&
-      p.y > by && p.y < by + b.h
-    ) {
+    if (Math.abs(p.x - b.x) < b.w / 2 + 1 && Math.abs(p.z - b.z) < b.d / 2 + 1 && p.y > by && p.y < by + b.h) {
       return true;
     }
   }
