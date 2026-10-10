@@ -1,9 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../utils/config.js';
-import {
-  RATE_DAMP_FACTOR,
-  INITIAL_PITCH,
-} from '../constants/camera.js';
+import { RATE_DAMP_FACTOR, INITIAL_PITCH } from '../constants/camera.js';
 
 /** Max vertical speed for stick/R-F climb & descend (m/s) */
 const CLIMB_SPEED = 400;
