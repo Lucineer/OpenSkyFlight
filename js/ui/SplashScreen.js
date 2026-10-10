@@ -4,7 +4,7 @@
 // NOTE: Plane list is hardcoded here (not imported from PlaneFactory) to avoid
 // module dependency issues — the splash must work even if 3D modules fail.
 
-import Logger from './Logger.js';
+import Logger from '../utils/Logger.js';
 
 const PLANES = {
   rafale: { name: 'Rafale', desc: 'Interceptor jet — fast and agile' },
@@ -25,11 +25,15 @@ export function getSelectedPlane() {
     const params = new URLSearchParams(location.search);
     const p = params.get('plane');
     if (p && PLANES[p]) return p;
-  } catch { /* non-browser */ }
+  } catch {
+    /* non-browser */
+  }
   try {
     const s = localStorage.getItem(STORAGE_KEY);
     if (s && PLANES[s]) return s;
-  } catch { /* no storage */ }
+  } catch {
+    /* no storage */
+  }
   return 'rafale';
 }
 
@@ -53,9 +57,13 @@ export function initSplash(onFly) {
     card.innerHTML = `<div class="plane-name">${def.name}</div><div class="plane-desc">${def.desc}</div>`;
     card.addEventListener('click', () => {
       selected = key;
-      grid.querySelectorAll('.plane-card').forEach(c => c.classList.remove('selected'));
+      grid.querySelectorAll('.plane-card').forEach((c) => c.classList.remove('selected'));
       card.classList.add('selected');
-      try { localStorage.setItem(STORAGE_KEY, key); } catch { /* no storage */ }
+      try {
+        localStorage.setItem(STORAGE_KEY, key);
+      } catch {
+        /* no storage */
+      }
       Logger.info('Splash', `Plane selected: ${def.name}`);
     });
     grid.appendChild(card);
