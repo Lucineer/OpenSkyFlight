@@ -29,12 +29,39 @@ export function createCloudLayer(options = {}) {
   const {
     // [altitude, formations, puffsPerFormation, minScale, maxScale, opacity, windX, windZ, tint]
     layers = [
-      { altitude: 500,  formations: 12, puffs: 3, minScale: 220, maxScale: 420, opacity: 0.85, wind: [6, 2],   tint: 0xe8edf2 },
-      { altitude: 1000, formations: 9,  puffs: 3, minScale: 320, maxScale: 600, opacity: 0.72, wind: [10, -3],  tint: 0xf2f5f9 },
-      { altitude: 1500, formations: 6,  puffs: 3, minScale: 450, maxScale: 800, opacity: 0.6,  wind: [14, 5],   tint: 0xffffff },
+      {
+        altitude: 500,
+        formations: 12,
+        puffs: 3,
+        minScale: 220,
+        maxScale: 420,
+        opacity: 0.85,
+        wind: [6, 2],
+        tint: 0xe8edf2,
+      },
+      {
+        altitude: 1000,
+        formations: 9,
+        puffs: 3,
+        minScale: 320,
+        maxScale: 600,
+        opacity: 0.72,
+        wind: [10, -3],
+        tint: 0xf2f5f9,
+      },
+      {
+        altitude: 1500,
+        formations: 6,
+        puffs: 3,
+        minScale: 450,
+        maxScale: 800,
+        opacity: 0.6,
+        wind: [14, 5],
+        tint: 0xffffff,
+      },
     ],
-    fieldSize = 12000,   // horizontal extent of each layer's wrapping field (m)
-    textureSize = 256,   // procedural puff texture resolution
+    fieldSize = 12000, // horizontal extent of each layer's wrapping field (m)
+    textureSize = 256, // procedural puff texture resolution
     textureVariants = 3, // seeded noise variants for visual variety
   } = options;
 
@@ -58,10 +85,10 @@ export function createCloudLayer(options = {}) {
           transparent: true,
           opacity: L.opacity,
           depthWrite: false, // no self-sorting artifacts between puffs
-          depthTest: true,   // terrain still occludes clouds correctly
+          depthTest: true, // terrain still occludes clouds correctly
           blending: THREE.NormalBlending,
-          fog: true,         // distant clouds melt into the horizon haze
-        })
+          fog: true, // distant clouds melt into the horizon haze
+        }),
     );
 
     const sprites = [];
@@ -197,17 +224,27 @@ function makePuffTexture(size, seed) {
 
   const fade = (t) => t * t * (3 - 2 * t);
   function vnoise(x, y) {
-    const xi = Math.floor(x), yi = Math.floor(y);
-    const xf = x - xi, yf = y - yi;
-    const x0 = ((xi % GS) + GS) % GS, y0 = ((yi % GS) + GS) % GS;
-    const x1 = (x0 + 1) % GS, y1 = (y0 + 1) % GS;
-    const a = grid[y0 * (GS + 1) + x0], b = grid[y0 * (GS + 1) + x1];
-    const c = grid[y1 * (GS + 1) + x0], e = grid[y1 * (GS + 1) + x1];
-    const u = fade(xf), v = fade(yf);
+    const xi = Math.floor(x),
+      yi = Math.floor(y);
+    const xf = x - xi,
+      yf = y - yi;
+    const x0 = ((xi % GS) + GS) % GS,
+      y0 = ((yi % GS) + GS) % GS;
+    const x1 = (x0 + 1) % GS,
+      y1 = (y0 + 1) % GS;
+    const a = grid[y0 * (GS + 1) + x0],
+      b = grid[y0 * (GS + 1) + x1];
+    const c = grid[y1 * (GS + 1) + x0],
+      e = grid[y1 * (GS + 1) + x1];
+    const u = fade(xf),
+      v = fade(yf);
     return a + (b - a) * u + (c - a) * v + (a - b - c + e) * u * v;
   }
   function fbm(x, y) {
-    let v = 0, amp = 0.5, fx = x, fy = y;
+    let v = 0,
+      amp = 0.5,
+      fx = x,
+      fy = y;
     for (let o = 0; o < 4; o++) {
       v += amp * vnoise(fx, fy);
       fx *= 2.03;
@@ -220,13 +257,15 @@ function makePuffTexture(size, seed) {
   const half = size / 2;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const nx = x / size, ny = y / size;
+      const nx = x / size,
+        ny = y / size;
       // 2-3 noise cells across the sprite for billowy lumps.
       const n = fbm(nx * 3.1 + seed * 0.013, ny * 3.1);
       // Soft density: clouds where noise is high, feathered edges.
       const density = smoothstep(0.32, 0.62, n);
       // Radial mask: 1 at center → 0 at rim.
-      const dx = (x - half) / half, dy = (y - half) / half;
+      const dx = (x - half) / half,
+        dy = (y - half) / half;
       const dist = Math.sqrt(dx * dx + dy * dy);
       const mask = 1 - smoothstep(0.55, 1.0, dist);
       const a = Math.max(0, Math.min(1, density * mask));
