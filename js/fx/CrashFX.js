@@ -55,12 +55,24 @@ const TYPE_LABELS = {
 };
 
 // Camera shake amplitude (meters) per crash type; decays over CRASH_DURATION.
-const SHAKE_AMP = { fireball: 4.0, skid: 2.0, cartwheel: 2.0, bump: 0.8, splash: 1.2, bellyflop: 2.5, ditch: 0.6, nosedive: 5.0, cliffstrike: 3.5, stalldrop: 1.8, bounce: 1.5 };
+const SHAKE_AMP = {
+  fireball: 4.0,
+  skid: 2.0,
+  cartwheel: 2.0,
+  bump: 0.8,
+  splash: 1.2,
+  bellyflop: 2.5,
+  ditch: 0.6,
+  nosedive: 5.0,
+  cliffstrike: 3.5,
+  stalldrop: 1.8,
+  bounce: 1.5,
+};
 
 export default class CrashFX {
   constructor(scene) {
     this.scene = scene;
-    this.active = false;      // a crash animation is running
+    this.active = false; // a crash animation is running
     this.bannerShown = false;
     this.type = null;
     this.t = 0;
@@ -211,7 +223,8 @@ export default class CrashFX {
       this._grav[i] = 260; // arcs back down into the water
       this._drag[i] = 0.8;
       this._baseAlpha[i] = 0.9;
-    } else { // 'dust'
+    } else {
+      // 'dust'
       const t = 0.72 + r() * 0.1;
       this._col[i3] = t;
       this._col[i3 + 1] = t * 0.87;
@@ -317,7 +330,7 @@ export default class CrashFX {
   }
 
   showBanner() {
-    const quips = (this.type === 'splash' || this.type === 'bellyflop' || this.type === 'ditch') ? WATER_QUIPS : QUIPS;
+    const quips = this.type === 'splash' || this.type === 'bellyflop' || this.type === 'ditch' ? WATER_QUIPS : QUIPS;
     this._quipEl.textContent = quips[(Math.random() * quips.length) | 0];
     this._subEl.textContent = TYPE_LABELS[this.type] || '';
     this._banner.style.display = 'flex';
@@ -428,7 +441,8 @@ export default class CrashFX {
       this.spinRate = 2.5;
       this.burst(p.x, p.y, p.z, 'dust', 20);
       this.burst(p.x, p.y, p.z, 'spark', 15);
-    } else { // 'bump'
+    } else {
+      // 'bump'
       this.vel.multiplyScalar(0.15);
       this.vel.y = 0;
       this.spinRate = 0;
@@ -494,7 +508,8 @@ export default class CrashFX {
       const bob = Math.sin(this.t * 3.0) * 1.2 * Math.max(0, 1 - this.t / CRASH_DURATION);
       p.y += (ground + 1.5 + bob - p.y) * Math.min(1, 3 * dt);
       if (!done && this.t < 1.2) this.burst(p.x, p.y, p.z, 'splash', 4);
-    } else { // 'bump'
+    } else {
+      // 'bump'
       const k = Math.min(1, this.t / 0.9);
       p.y = ground + 2 + Math.sin(k * Math.PI) * 9;
       if (this.t < 0.5) {
