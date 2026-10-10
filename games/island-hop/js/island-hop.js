@@ -88,8 +88,7 @@ runGame({
       if (ctx.next >= STOPS.length) {
         ctx.finished = true;
         soundFX.win();
-      }
-      else {
+      } else {
         ctx.beacons[ctx.next].visible = true;
         ctx.msg = STOPS[ctx.next].name.toUpperCase();
         ctx.msgUntil = ctx.t + 2.2;
