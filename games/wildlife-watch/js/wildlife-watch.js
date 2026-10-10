@@ -118,7 +118,7 @@ function nearest(ctx, ev) {
   // Convert tap to normalized device coordinates
   const ndc = {
     x: ((ev.clientX - rect.left) / rect.width) * 2 - 1,
-    y: -((ev.clientY - rect.top) / rect.height) * 2 + 1
+    y: -((ev.clientY - rect.top) / rect.height) * 2 + 1,
   };
   // Raycast from camera through tap point
   const raycaster = new THREE.Raycaster();
