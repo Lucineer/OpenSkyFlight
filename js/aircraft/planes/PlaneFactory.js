@@ -47,8 +47,8 @@ export const PLANES = {
   rafale: {
     name: 'Rafale',
     desc: 'Interceptor jet — fast and agile',
-    speed: 1.0,      // multiplier on cameraSpeed
-    agility: 1.0,    // roll/pitch responsiveness
+    speed: 1.0, // multiplier on cameraSpeed
+    agility: 1.0, // roll/pitch responsiveness
     build() {
       const g = new THREE.Group();
       // Delta wing fighter
@@ -64,9 +64,11 @@ export const PLANES = {
       g.add(box(0.12, 1.2, 1.0, 0x4a5b6d, -0.5, 0.8, 2.2));
       g.add(box(0.12, 1.2, 1.0, 0x4a5b6d, 0.5, 0.8, 2.2));
       // Cockpit
-      const cp = cockpit(); cp.position.set(0, 0.5, -1.2); g.add(cp);
+      const cp = cockpit();
+      cp.position.set(0, 0.5, -1.2);
+      g.add(cp);
       return g;
-    }
+    },
   },
 
   cub: {
@@ -85,20 +87,25 @@ export const PLANES = {
       // Tail
       g.add(box(2.4, 0.12, 0.9, 0xf2c230, 0, 0.15, 2.3));
       g.add(box(0.12, 1.0, 0.8, 0xf2c230, 0, 0.6, 2.4));
-      const cp = cockpit(); cp.position.set(0, 0.45, -0.8); g.add(cp);
+      const cp = cockpit();
+      cp.position.set(0, 0.45, -0.8);
+      g.add(cp);
       // Prop
-      const p = prop(); p.position.set(0, 0, -2.6); p.rotation.x = 0; g.add(p);
+      const p = prop();
+      p.position.set(0, 0, -2.6);
+      p.rotation.x = 0;
+      g.add(p);
       // Tundra tires
       const wg = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 10);
       const wm = mat(0x222222);
-      [-1, 1].forEach(x => {
+      [-1, 1].forEach((x) => {
         const w = new THREE.Mesh(wg, wm);
         w.rotation.z = Math.PI / 2;
         w.position.set(x * 1.1, -0.7, -0.2);
         g.add(w);
       });
       return g;
-    }
+    },
   },
 
   otter: {
@@ -112,19 +119,23 @@ export const PLANES = {
       // High wing
       g.add(box(10, 0.22, 2.0, 0xecf0f1, 0, 0.95, -0.5)); // white wing
       // Twin engines
-      [-2.2, 2.2].forEach(x => {
+      [-2.2, 2.2].forEach((x) => {
         const eng = cyl(0.45, 0.45, 2.2, 0x7f8c8d, x, 0.7, -1.2);
         eng.rotation.x = Math.PI / 2;
         g.add(eng);
-        const p = prop(); p.position.set(x, 0.7, -2.4); g.add(p);
+        const p = prop();
+        p.position.set(x, 0.7, -2.4);
+        g.add(p);
       });
       // T-tail
       g.add(box(3.2, 0.15, 1.1, 0xc0392b, 0, 0.2, 3.2));
       g.add(box(0.15, 1.6, 1.0, 0xc0392b, 0, 0.9, 3.3));
       g.add(box(3.0, 0.12, 0.9, 0xc0392b, 0, 1.65, 3.3));
-      const cp = cockpit(); cp.position.set(0, 0.6, -2.2); g.add(cp);
+      const cp = cockpit();
+      cp.position.set(0, 0.6, -2.2);
+      g.add(cp);
       return g;
-    }
+    },
   },
 
   atr: {
@@ -140,11 +151,14 @@ export const PLANES = {
       // High straight wing
       g.add(box(13, 0.25, 2.4, 0xd5dbdb, 0, 1.05, -0.8));
       // Twin PW127 turboprops in nacelles
-      [-3.1, 3.1].forEach(x => {
+      [-3.1, 3.1].forEach((x) => {
         const nac = cyl(0.55, 0.5, 3.0, 0x2c3e50, x, 0.85, -1.6);
         nac.rotation.x = Math.PI / 2;
         g.add(nac);
-        const p = prop(0x1a1a1a); p.scale.setScalar(1.4); p.position.set(x, 0.85, -3.2); g.add(p);
+        const p = prop(0x1a1a1a);
+        p.scale.setScalar(1.4);
+        p.position.set(x, 0.85, -3.2);
+        g.add(p);
         // Exhaust stub
         g.add(box(0.15, 0.15, 0.6, 0x555555, x + 0.5, 0.7, -1.0));
       });
@@ -153,15 +167,20 @@ export const PLANES = {
       g.add(box(4.2, 0.16, 1.1, 0xd5dbdb, 0, 2.35, 4.3));
       // Ventral fin
       g.add(box(0.12, 0.8, 0.9, 0x2980b9, 0, -0.9, 4.2));
-      const cp = cockpit(); cp.position.set(0, 0.55, -3.6); cp.scale.set(1.1, 0.75, 1.3); g.add(cp);
+      const cp = cockpit();
+      cp.position.set(0, 0.55, -3.6);
+      cp.scale.set(1.1, 0.75, 1.3);
+      g.add(cp);
       // Main gear (fixed, ATR-style)
-      [-1.3, 1.3].forEach(x => {
+      [-1.3, 1.3].forEach((x) => {
         g.add(box(0.12, 0.9, 0.12, 0x555555, x, -0.9, 0.2));
         const w = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.22, 10), mat(0x222222));
-        w.rotation.z = Math.PI / 2; w.position.set(x, -1.35, 0.2); g.add(w);
+        w.rotation.z = Math.PI / 2;
+        w.position.set(x, -1.35, 0.2);
+        g.add(w);
       });
       return g;
-    }
+    },
   },
 
   biplane: {
@@ -173,19 +192,23 @@ export const PLANES = {
       const g = new THREE.Group();
       g.add(fuselage(5.5, 0.55, 0xa93226)); // deep red
       // Two wings
-      g.add(box(7, 0.14, 1.4, 0xf5d547, 0, 0.7, -0.5));  // top, yellow
+      g.add(box(7, 0.14, 1.4, 0xf5d547, 0, 0.7, -0.5)); // top, yellow
       g.add(box(6, 0.14, 1.4, 0xf5d547, 0, -0.25, -0.5)); // bottom
       // Struts between wings
-      [-2.2, 2.2].forEach(x => {
+      [-2.2, 2.2].forEach((x) => {
         g.add(box(0.1, 1.0, 0.1, 0x5d4037, x, 0.22, -0.5));
       });
       // Tail
       g.add(box(2.2, 0.1, 0.8, 0xa93226, 0, 0.1, 2.5));
       g.add(box(0.1, 0.9, 0.7, 0xa93226, 0, 0.5, 2.6));
-      const cp = cockpit(); cp.position.set(0, 0.35, -0.3); g.add(cp);
-      const p = prop(); p.position.set(0, 0, -2.9); g.add(p);
+      const cp = cockpit();
+      cp.position.set(0, 0.35, -0.3);
+      g.add(cp);
+      const p = prop();
+      p.position.set(0, 0, -2.9);
+      g.add(p);
       return g;
-    }
+    },
   },
 
   beaver: {
@@ -199,10 +222,14 @@ export const PLANES = {
       g.add(box(8.5, 0.2, 1.8, 0x2e86c1, 0, 0.8, -0.4));
       g.add(box(2.6, 0.14, 1.0, 0x2e86c1, 0, 0.15, 2.7));
       g.add(box(0.14, 1.1, 0.9, 0x2e86c1, 0, 0.65, 2.8));
-      const cp = cockpit(); cp.position.set(0, 0.55, -1.0); g.add(cp);
-      const p = prop(); p.position.set(0, 0, -3.1); g.add(p);
+      const cp = cockpit();
+      cp.position.set(0, 0.55, -1.0);
+      g.add(cp);
+      const p = prop();
+      p.position.set(0, 0, -3.1);
+      g.add(p);
       // Floats
-      [-1.1, 1.1].forEach(x => {
+      [-1.1, 1.1].forEach((x) => {
         const fl = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 4, 6, 10), mat(0xecf0f1));
         fl.rotation.x = Math.PI / 2;
         fl.position.set(x, -1.1, 0);
@@ -212,7 +239,7 @@ export const PLANES = {
         g.add(box(0.08, 0.8, 0.08, 0x555555, x, -0.5, 1.0));
       });
       return g;
-    }
+    },
   },
 
   extra: {
@@ -229,10 +256,14 @@ export const PLANES = {
       g.add(box(1.2, 0.17, 1.5, 0xffffff, 2.9, -0.2, -0.3));
       g.add(box(2.4, 0.12, 0.9, 0xe74c3c, 0, 0.1, 2.5));
       g.add(box(0.12, 1.0, 0.8, 0xe74c3c, 0, 0.55, 2.6));
-      const cp = cockpit(0x0a0a0a); cp.position.set(0, 0.4, -0.6); g.add(cp);
-      const p = prop(0x111111); p.position.set(0, 0, -2.9); g.add(p);
+      const cp = cockpit(0x0a0a0a);
+      cp.position.set(0, 0.4, -0.6);
+      g.add(cp);
+      const p = prop(0x111111);
+      p.position.set(0, 0, -2.9);
+      g.add(p);
       return g;
-    }
+    },
   },
 
   jayhawk: {
@@ -247,15 +278,21 @@ export const PLANES = {
       const body = fuselage(5.5, 0.9, 0xe67e22); // Coast Guard orange
       g.add(body);
       // Cockpit
-      const cp = cockpit(); cp.position.set(0, 0.4, -1.8); cp.scale.set(1, 0.7, 1.2); g.add(cp);
+      const cp = cockpit();
+      cp.position.set(0, 0.4, -1.8);
+      cp.scale.set(1, 0.7, 1.2);
+      g.add(cp);
       // Tail boom
       const boom = cyl(0.35, 0.2, 4, 0xe67e22, 0, 0.3, 4.5);
       boom.rotation.x = Math.PI / 2;
       g.add(boom);
       // Tail fin + rotor
       g.add(box(0.12, 1.2, 0.7, 0xe67e22, 0, 0.9, 6.3));
-      const tr = prop(0x333333); tr.scale.setScalar(0.6);
-      tr.rotation.y = Math.PI / 2; tr.position.set(0.15, 0.9, 6.3); g.add(tr);
+      const tr = prop(0x333333);
+      tr.scale.setScalar(0.6);
+      tr.rotation.y = Math.PI / 2;
+      tr.position.set(0.15, 0.9, 6.3);
+      g.add(tr);
       // Main rotor (will spin via userData)
       const rotor = new THREE.Group();
       const b1 = box(9, 0.08, 0.35, 0x2c3e50);
@@ -267,7 +304,7 @@ export const PLANES = {
       // Mast
       g.add(cyl(0.12, 0.12, 0.8, 0x555555, 0, 0.95, -0.5));
       // Skids
-      [-1, 1].forEach(x => {
+      [-1, 1].forEach((x) => {
         g.add(box(0.1, 0.1, 3.5, 0x333333, x * 1.0, -1.1, 0));
         g.add(box(0.08, 0.7, 0.08, 0x333333, x * 1.0, -0.75, -1.0));
         g.add(box(0.08, 0.7, 0.08, 0x333333, x * 1.0, -0.75, 1.0));
@@ -275,7 +312,7 @@ export const PLANES = {
       // Coast Guard stripe
       g.add(box(1.85, 0.25, 5.0, 0xffffff, 0, 0.1, 0));
       return g;
-    }
+    },
   },
 
   b17: {
@@ -291,30 +328,41 @@ export const PLANES = {
       // Big high wing
       g.add(box(16, 0.3, 3.0, 0x4a4a2e, 0, 1.0, -1.0));
       // Four engines with props
-      [-5.5, -2.0, 2.0, 5.5].forEach(x => {
+      [-5.5, -2.0, 2.0, 5.5].forEach((x) => {
         const nac = cyl(0.6, 0.55, 3.5, 0x3a3a24, x, 0.8, -1.8);
         nac.rotation.x = Math.PI / 2;
         g.add(nac);
-        const p = prop(0x1a1a1a); p.scale.setScalar(1.6); p.position.set(x, 0.8, -3.7); g.add(p);
+        const p = prop(0x1a1a1a);
+        p.scale.setScalar(1.6);
+        p.position.set(x, 0.8, -3.7);
+        g.add(p);
       });
       // Tail: big vertical fin + horizontal stabilizers
       g.add(box(0.2, 3.0, 1.5, 0x4a4a2e, 0, 1.5, 5.2)); // fin
       g.add(box(6.0, 0.2, 1.4, 0x4a4a2e, 0, 0.3, 5.0)); // stabilizers
       // Nose: glass bombardier position
-      const nose = new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 8), mat(0x87ceeb, { roughness: 0.1, metalness: 0.2 }));
-      nose.position.set(0, -0.2, -5.8); nose.scale.set(1, 0.8, 1.2); g.add(nose);
+      const nose = new THREE.Mesh(
+        new THREE.SphereGeometry(0.9, 12, 8),
+        mat(0x87ceeb, { roughness: 0.1, metalness: 0.2 }),
+      );
+      nose.position.set(0, -0.2, -5.8);
+      nose.scale.set(1, 0.8, 1.2);
+      g.add(nose);
       // Top turret
       g.add(cyl(0.4, 0.5, 0.6, 0x3a3a24, 0, 1.3, -0.5));
       // Belly ball turret
       const belly = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8), mat(0x87ceeb, { roughness: 0.1 }));
-      belly.position.set(0, -1.2, 0.5); g.add(belly);
+      belly.position.set(0, -1.2, 0.5);
+      g.add(belly);
       // US star insignia (simplified white star on blue)
-      [-8.1, 8.1].forEach(x => {
+      [-8.1, 8.1].forEach((x) => {
         g.add(box(0.05, 1.2, 1.2, 0xffffff, x, 1.0, -1.0));
       });
-      const cp = cockpit(); cp.position.set(0, 0.8, -3.5); g.add(cp);
+      const cp = cockpit();
+      cp.position.set(0, 0.8, -3.5);
+      g.add(cp);
       return g;
-    }
+    },
   },
 };
 
