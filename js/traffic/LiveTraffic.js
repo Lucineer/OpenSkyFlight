@@ -14,28 +14,28 @@ import { buildPlane } from '../aircraft/planes/PlaneFactory.js';
 const LIVERIES = {
   alaska: {
     name: 'Alaska Airlines',
-    fuselage: 0x00395b,   // deep navy
-    belly: 0xf4f2ec,      // cream
-    tail: 0xefe3d2,       // eskimo-face cream
-    cheatline: 0x009a8e,  // teal wave
+    fuselage: 0x00395b, // deep navy
+    belly: 0xf4f2ec, // cream
+    tail: 0xefe3d2, // eskimo-face cream
+    cheatline: 0x009a8e, // teal wave
     wing: 0xa8b0b5,
     engine: 0xe2e2dc,
   },
   delta: {
     name: 'Delta',
-    fuselage: 0xffffff,   // white
-    belly: 0xd8dce0,      // light gray
-    tail: 0x003366,       // delta dark blue
-    cheatline: 0xe01933,  // widget red
+    fuselage: 0xffffff, // white
+    belly: 0xd8dce0, // light gray
+    tail: 0x003366, // delta dark blue
+    cheatline: 0xe01933, // widget red
     wing: 0xa8b0b5,
     engine: 0xe8e8e8,
   },
   generic: {
     name: 'Generic',
-    fuselage: 0xf0f0f0,   // white
+    fuselage: 0xf0f0f0, // white
     belly: 0xd0d0d0,
-    tail: 0x666677,       // gray
-    cheatline: 0x3366aa,  // blue stripe
+    tail: 0x666677, // gray
+    cheatline: 0x3366aa, // blue stripe
     wing: 0xb0b5ba,
     engine: 0xe0e0e0,
   },
@@ -89,20 +89,20 @@ function applyLivery(group, liveryKey) {
   return L;
 }
 
-const POLL_INTERVAL = 15000;   // ms between API polls
-const QUERY_RADIUS_NM = 100;   // query radius for the API
-const SPAWN_RADIUS_NM = 50;    // only render within this distance
-const MAX_PLANES = 12;         // iPad performance budget
-const FT_TO_M = 0.3048;        // feet to meters
-const KT_TO_MS = 0.514444;     // knots to m/s
+const POLL_INTERVAL = 15000; // ms between API polls
+const QUERY_RADIUS_NM = 100; // query radius for the API
+const SPAWN_RADIUS_NM = 50; // only render within this distance
+const MAX_PLANES = 12; // iPad performance budget
+const FT_TO_M = 0.3048; // feet to meters
+const KT_TO_MS = 0.514444; // knots to m/s
 
 function haversineNm(lat1, lon1, lat2, lon2) {
   const R = 3440.065;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
@@ -110,17 +110,47 @@ function haversineNm(lat1, lon1, lat2, lon2) {
 function mockTraffic(centerLat, centerLon) {
   const now = Date.now() / 1000;
   return [
-    { hex: 'mock1', flight: 'ASA61', lat: centerLat + 0.3, lon: centerLon - 0.4, alt_baro: 12000, gs: 320, track: 90, t: 'B739', seen_pos: 2 },
-    { hex: 'mock2', flight: 'DAL853', lat: centerLat - 0.2, lon: centerLon + 0.5, alt_baro: 35000, gs: 450, track: 270, t: 'A223', seen_pos: 5 },
-    { hex: 'mock3', flight: 'QXE2034', lat: centerLat + 0.1, lon: centerLon + 0.1, alt_baro: 8000, gs: 220, track: 180, t: 'DH8D', seen_pos: 1 },
+    {
+      hex: 'mock1',
+      flight: 'ASA61',
+      lat: centerLat + 0.3,
+      lon: centerLon - 0.4,
+      alt_baro: 12000,
+      gs: 320,
+      track: 90,
+      t: 'B739',
+      seen_pos: 2,
+    },
+    {
+      hex: 'mock2',
+      flight: 'DAL853',
+      lat: centerLat - 0.2,
+      lon: centerLon + 0.5,
+      alt_baro: 35000,
+      gs: 450,
+      track: 270,
+      t: 'A223',
+      seen_pos: 5,
+    },
+    {
+      hex: 'mock3',
+      flight: 'QXE2034',
+      lat: centerLat + 0.1,
+      lon: centerLon + 0.1,
+      alt_baro: 8000,
+      gs: 220,
+      track: 180,
+      t: 'DH8D',
+      seen_pos: 1,
+    },
   ];
 }
 
 export default class LiveTraffic {
   constructor(scene, terrain, options = {}) {
     this.scene = scene;
-    this.terrain = terrain;       // GeoTerrainManager (has .tileMap)
-    this.planes = new Map();      // hex -> entry
+    this.terrain = terrain; // GeoTerrainManager (has .tileMap)
+    this.planes = new Map(); // hex -> entry
     this.enabled = options.enabled !== false;
     this.useMock = options.useMock || false;
     this.workerUrl = options.workerUrl || 'https://traffic.lucineer.com/api/traffic';
@@ -161,7 +191,8 @@ export default class LiveTraffic {
       const cam = this._getCamera();
       if (!cam) return;
       const geo = this.terrain.tileMap.world2geo(cam.position.clone());
-      const lat = geo.y, lon = geo.x;
+      const lat = geo.y,
+        lon = geo.x;
 
       let aircraft;
       if (this.useMock) {
@@ -188,25 +219,27 @@ export default class LiveTraffic {
     return this._camera || null;
   }
 
-  setCamera(cam) { this._camera = cam; }
+  setCamera(cam) {
+    this._camera = cam;
+  }
 
   update(aircraft, playerLat, playerLon) {
     const seen = new Set();
 
     const sorted = aircraft
-      .filter(a => a.lat != null && a.lon != null && (a.seen_pos || 0) < 30)
-      .map(a => ({ ...a, distNm: haversineNm(playerLat, playerLon, a.lat, a.lon) }))
-      .filter(a => a.distNm < SPAWN_RADIUS_NM)
+      .filter(
+        (a) => a.lat !== null && a.lat !== undefined && a.lon !== null && a.lon !== undefined && (a.seen_pos || 0) < 30,
+      )
+      .map((a) => ({ ...a, distNm: haversineNm(playerLat, playerLon, a.lat, a.lon) }))
+      .filter((a) => a.distNm < SPAWN_RADIUS_NM)
       .sort((a, b) => a.distNm - b.distNm)
       .slice(0, MAX_PLANES);
 
     for (const ac of sorted) {
       seen.add(ac.hex);
-      const worldPos = this.terrain.tileMap.geo2world(
-        new THREE.Vector3(ac.lon, ac.lat, 0)
-      );
+      const worldPos = this.terrain.tileMap.geo2world(new THREE.Vector3(ac.lon, ac.lat, 0));
       // Altitude: baro feet → meters. 'ground' = on ground.
-      const altFt = ac.alt_baro === 'ground' ? 0 : (parseFloat(ac.alt_baro) || 0);
+      const altFt = ac.alt_baro === 'ground' ? 0 : parseFloat(ac.alt_baro) || 0;
       worldPos.y = Math.max(0, altFt * FT_TO_M);
 
       let entry = this.planes.get(ac.hex);
@@ -226,7 +259,8 @@ export default class LiveTraffic {
         this.scene.add(label);
 
         entry = {
-          group, label,
+          group,
+          label,
           target: worldPos.clone(),
           livery: LIVERIES[liveryKey].name,
           callsign: (ac.flight || '').trim(),
@@ -254,7 +288,8 @@ export default class LiveTraffic {
 
   _makeLabel(callsign, altFt) {
     const canvas = document.createElement('canvas');
-    canvas.width = 256; canvas.height = 64;
+    canvas.width = 256;
+    canvas.height = 64;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillRect(0, 0, 256, 64);
@@ -281,13 +316,15 @@ export default class LiveTraffic {
       entry.group.position.lerp(entry.target, k);
       entry.label.position.lerp(
         new THREE.Vector3(entry.target.x, entry.target.y + 15 * entry.group.scale.x, entry.target.z),
-        k
+        k,
       );
       // Face the sprite toward camera (sprites auto-face, but keep label above plane)
     }
   }
 
-  get count() { return this.planes.size; }
+  get count() {
+    return this.planes.size;
+  }
 }
 
 export { LIVERIES, pickLivery };
