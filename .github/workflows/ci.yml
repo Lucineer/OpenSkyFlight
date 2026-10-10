@@ -1,0 +1,103 @@
+# CI for OpenSkyFlight.
+#
+# The repo already defines both gates in package.json (`npm run lint` and
+# `npm run format:check`); they were simply never wired to anything, so a
+# regression could land silently. This workflow runs both on every push and PR.
+#
+# Notes:
+#  - No test suite exists yet, so there is no `npm test` step. When tests are
+#    added, add them here — the point of this file is that the gate is real.
+#  - Each job calls an individual npm script rather than `npm run ci`, so a
+#    new gate added to the `ci` script is NOT automatically covered here. The
+#    diagnostics job below exists because of exactly that trap.
+#  - `npm ci` requires package-lock.json to be in sync with package.json.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-format:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Format check (prettier)
+        run: npm run format:check
+
+  import-graph:
+    name: Import graph resolves
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Catches unresolved relative imports (e.g. a module importing a sibling
+      # that does not exist) without booting a browser. js/ is served as native
+      # ES modules, so a bad specifier is a runtime 404 that lint cannot see.
+      - name: Check every relative import resolves
+        run: node scripts/check-imports.mjs
+
+  # The diagnostics layer claims it detects stalled render loops, long frames
+  # and NaN flight state. A claim like that is worthless without something that
+  # executes it, so this job runs the assertions that drive those code paths.
+  # It is a separate job rather than a step in the lint job so that a failure
+  # reads as "the detector is broken", not "the linter is broken".
+  diagnostics:
+    name: Diagnostics detectors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Assert the watchdog and telemetry detect what they claim
+        run: node scripts/check-diagnostics.mjs
+
+  # Neither `three` nor `three-tile` appears in package.json or
+  # package-lock.json: three is a jsDelivr URL in each page's importmap and
+  # three-tile is a vendored fork. So the versions the renderer actually loads
+  # are governed by strings in HTML files, and nothing was checking they
+  # agreed. This gate caught two of the four pages pinning a different
+  # (nonexistent) path. It runs on every push, because the failure it prevents
+  # is a 404 that only shows up as a blank canvas in production.
+  runtime-deps:
+    name: Renderer deps consistent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Assert three pins agree across all pages and the fork is present
+        run: node scripts/check-runtime-deps.mjs
