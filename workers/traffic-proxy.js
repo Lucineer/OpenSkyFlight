@@ -22,7 +22,7 @@ const UPSTREAMS = [
   },
 ];
 
-const UA = 'SitkaSkies/1.0 (https://lucineer.com; contact: magnus.digennaro@gmail.com)';
+const UA = 'SitkaSkies/1.0';
 
 function corsHeaders(source) {
   return {
@@ -61,6 +61,7 @@ export default {
     }
 
     // Try upstreams in order
+    const errors = [];
     for (const up of UPSTREAMS) {
       try {
         const controller = new AbortController();
@@ -76,13 +77,14 @@ export default {
             headers: corsHeaders(up.name),
           });
         }
+        errors.push(`${up.name}: HTTP ${res.status}`);
       } catch (e) {
-        // try next upstream
+        errors.push(`${up.name}: ${e.message}`);
       }
     }
 
     // All upstreams failed — return empty (game handles gracefully)
-    return new Response(JSON.stringify({ ac: [], now: Date.now() / 1000 }), {
+    return new Response(JSON.stringify({ ac: [], now: Date.now() / 1000, _debug: errors.join(' | ') }), {
       headers: corsHeaders('none'),
     });
   },
