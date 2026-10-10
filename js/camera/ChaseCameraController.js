@@ -1,12 +1,6 @@
 import * as THREE from 'three';
 import SpringScalar from './SpringScalar.js';
-import {
-  BOOM_DISTANCE,
-  BOOM_HEIGHT,
-  STIFFNESS_YAW,
-  STIFFNESS_PITCH,
-  FOLLOW_YAW,
-} from '../constants/camera.js';
+import { BOOM_DISTANCE, BOOM_HEIGHT, STIFFNESS_YAW, STIFFNESS_PITCH, FOLLOW_YAW } from '../constants/camera.js';
 
 export default class ChaseCameraController {
   constructor() {
