@@ -1,4 +1,20 @@
-import { Fn, float, vec2, vec3, uv, positionWorld, fract, smoothstep, mix, min, max, sin, step, clamp, fwidth } from 'three/tsl';
+import {
+  Fn,
+  float,
+  vec2,
+  vec3,
+  uv,
+  positionWorld,
+  fract,
+  smoothstep,
+  mix,
+  min,
+  max,
+  sin,
+  step,
+  clamp,
+  fwidth,
+} from 'three/tsl';
 import * as THREE from 'three';
 import { TileMap, TileSource, applyTerrariumElevation } from 'three-tile';
 import { CONFIG, onChange } from '../utils/config.js';
@@ -19,7 +35,6 @@ function latLonToMercator(lat, lon) {
   const y = EARTH_RAD * Math.log(Math.tan(Math.PI / 4 + latRad / 2));
   return { x, y };
 }
-
 
 export default class GeoTerrainManager {
   static _isSynthetic(mode) {
@@ -265,10 +280,10 @@ export default class GeoTerrainManager {
       const t = clamp(elev.div(float(4000.0)), 0.0, 1.0);
 
       const c0 = vec3(0.02, 0.18, 0.08);
-      const c1 = vec3(0.12, 0.30, 0.05);
-      const c2 = vec3(0.35, 0.30, 0.10);
-      const c3 = vec3(0.55, 0.50, 0.45);
-      const c4 = vec3(0.85, 0.85, 0.90);
+      const c1 = vec3(0.12, 0.3, 0.05);
+      const c2 = vec3(0.35, 0.3, 0.1);
+      const c3 = vec3(0.55, 0.5, 0.45);
+      const c4 = vec3(0.85, 0.85, 0.9);
 
       const t1 = clamp(t.mul(float(8.0)), 0.0, 1.0);
       const t2 = clamp(t.sub(float(0.125)).mul(float(2.667)), 0.0, 1.0);
@@ -297,15 +312,11 @@ export default class GeoTerrainManager {
       const lineMaj = smoothstep(fwMaj.mul(float(2.0)), fwMaj.mul(float(0.5)), distMaj);
 
       const minorColor = mix(baseColor, vec3(0.0, 0.6, 0.7), float(0.3));
-      const medColor   = vec3(0.0, 0.80, 0.90);
-      const majColor   = vec3(0.9, 0.95, 1.0);
+      const medColor = vec3(0.0, 0.8, 0.9);
+      const majColor = vec3(0.9, 0.95, 1.0);
 
       const lineAlpha = max(lineMinor.mul(float(0.25)), max(lineMed.mul(float(0.55)), lineMaj));
-      const lineColor = mix(
-        mix(minorColor, medColor, step(float(0.25), lineMed)),
-        majColor,
-        step(float(0.5), lineMaj)
-      );
+      const lineColor = mix(mix(minorColor, medColor, step(float(0.25), lineMed)), majColor, step(float(0.5), lineMaj));
 
       return mix(baseColor, lineColor, lineAlpha);
     })();
@@ -313,8 +324,7 @@ export default class GeoTerrainManager {
 
   _getSyntheticNode(mode) {
     if (!this._syntheticNodes[mode]) {
-      this._syntheticNodes[mode] =
-        mode === 'elevation' ? this._createLinesNode() : this._createRadarNode();
+      this._syntheticNodes[mode] = mode === 'elevation' ? this._createLinesNode() : this._createRadarNode();
     }
     return this._syntheticNodes[mode];
   }
