@@ -39,7 +39,7 @@ export default class AircraftManager {
       this.mesh = null;
     }
     if (type === 'rafale') {
-      await this.load('assets/models/rafale/Rafale.gltf');
+      await this.load('/assets/models/rafale/Rafale.gltf');
     } else {
       const { group, def } = buildPlane(type);
       this.planeDef = def;
@@ -76,7 +76,7 @@ export default class AircraftManager {
 
     this.mesh.rotation.y = Math.PI;
 
-    const texture = await new THREE.TextureLoader().loadAsync('assets/models/rafale/Rafale_texture.png');
+    const texture = await new THREE.TextureLoader().loadAsync('/assets/models/rafale/Rafale_texture.png');
     texture.flipY = false;
     texture.colorSpace = THREE.SRGBColorSpace;
     this.mesh.traverse((child) => {
