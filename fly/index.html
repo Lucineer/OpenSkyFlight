@@ -39,6 +39,31 @@
       <div class="boot-error" id="boot-error" style="display:none;"></div>
     </div>
   </div>
+  <script>
+  // BOOT_WATCHDOG_V1: if the 3D engine hasn't hidden the boot overlay within
+  // 45s (module load failure, hung init, no WebGPU), replace the silent
+  // "Loading Sitka..." with an actionable message. Classic script on purpose:
+  // it runs even when the module graph fails to load.
+  (function () {
+    setTimeout(function () {
+      var overlay = document.getElementById('boot-overlay');
+      var status = document.getElementById('boot-status');
+      var errBox = document.getElementById('boot-error');
+      if (!overlay || overlay.classList.contains('hidden')) return; // booted OK
+      if (errBox && errBox.style.display === 'block' && errBox.textContent) return; // error already shown
+      if (status) status.textContent = 'Still loading — the 3D engine is taking unusually long.';
+      if (errBox) {
+        errBox.style.display = 'block';
+        errBox.innerHTML =
+          'The flight sim has not finished starting after 45 seconds.<br><br>' +
+          '<a href="?renderer=webgl" style="color:#7df9ff">Try the WebGL fallback</a>' +
+          ' &nbsp;&middot;&nbsp; ' +
+          '<a href="#" onclick="location.reload();return false;" style="color:#7df9ff">Reload the page</a><br><br>' +
+          'If this keeps happening, the device may have lost network access to the terrain or 3D library servers.';
+      }
+    }, 45000);
+  })();
+  </script>
   <canvas id="hud"></canvas>
   <!-- Touch throttle: vertical cruise slider, wired up by TouchControls on touch devices -->
   <div id="throttle-slider" aria-label="Throttle">
