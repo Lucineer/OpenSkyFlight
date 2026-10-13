@@ -8,7 +8,7 @@
  * Decoupled: just needs a THREE.Scene, a source Object3D to clone, and a
  * keyframe array in FlightRecorder track format.
  */
-import * as THREE from "three";
+import * as THREE from 'three';
 
 const GHOST_OPACITY = 0.45;
 const GHOST_TINT = 0x7df9ff; // cyan glow
