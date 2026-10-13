@@ -9,7 +9,7 @@
  * flight model — just samples whatever Object3D you hand it each tick.
  */
 const SAMPLE_INTERVAL_MS = 100;
-const STORAGE_KEY = 'osf-flight-track-v1';
+const STORAGE_KEY = "osf-flight-track-v1";
 const MAX_KEYFRAMES = 36000; // 100ms * 36000 = 1 hour max
 
 export default class FlightRecorder {
