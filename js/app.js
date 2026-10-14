@@ -36,6 +36,7 @@ import FlightRecorder from './cinematography/FlightRecorder.js';
 import GhostPlayer from './cinematography/GhostPlayer.js';
 import CameraTrackRecorder from './cinematography/CameraTrackRecorder.js';
 import CameraTrackPlayer from './cinematography/CameraTrackPlayer.js';
+import MotionTilePlayer, { TILE_CATALOG } from './cinematography/MotionTilePlayer.js';
 import Stats from 'stats.js';
 import { detectTileMode, getTileMode } from './geo/TileUrls.js';
 
@@ -445,6 +446,126 @@ async function initApp() {
   });
   document.body.appendChild(_camPlayBtn);
 
+  // --- Motion tiles: scripted maneuver playback + chaining ---
+  const motionTilePlayer = new MotionTilePlayer();
+  motionTilePlayer.preloadCatalog();
+
+  // Tiles button (44px) — toggles the tile picker panel
+  const _tileBtn = document.createElement('button');
+  _tileBtn.id = 'cine-tiles';
+  _tileBtn.textContent = '🎬 Tiles';
+  _tileBtn.setAttribute('aria-label', 'Open motion tile picker');
+  _tileBtn.style.cssText =
+    'position:fixed;bottom:360px;right:12px;z-index:50;min-width:44px;min-height:44px;padding:10px 14px;border-radius:12px;border:1px solid rgba(180,120,255,0.5);background:rgba(25,0,40,0.75);color:#c9a0ff;font-size:14px;font-weight:bold;cursor:pointer;backdrop-filter:blur(4px);';
+  document.body.appendChild(_tileBtn);
+
+  // Tile picker panel (hidden by default)
+  const _tilePanel = document.createElement('div');
+  _tilePanel.id = 'cine-tile-panel';
+  _tilePanel.style.cssText =
+    'position:fixed;bottom:416px;right:12px;z-index:50;width:260px;max-height:60vh;overflow-y:auto;padding:12px;border-radius:12px;border:1px solid rgba(180,120,255,0.5);background:rgba(15,0,30,0.92);color:#e8d8ff;font-size:14px;display:none;backdrop-filter:blur(6px);';
+  _tilePanel.innerHTML =
+    '<div style="font-weight:bold;margin-bottom:8px;">Motion Tiles</div>' +
+    '<div style="font-size:12px;color:#b8a0d8;margin-bottom:8px;">Tap a tile to play it. Toggle Chain to queue several, then Play Chain.</div>';
+  document.body.appendChild(_tilePanel);
+
+  let _tileChainMode = false;
+  let _tileChain = []; // queued tile JSON objects
+
+  const _tileChainBtn = document.createElement('button');
+  _tileChainBtn.textContent = '⛓ Chain: OFF';
+  _tileChainBtn.style.cssText =
+    'width:100%;min-height:44px;margin-bottom:8px;border-radius:8px;border:1px solid rgba(180,120,255,0.5);background:rgba(40,10,70,0.8);color:#c9a0ff;font-size:14px;font-weight:bold;cursor:pointer;';
+  _tileChainBtn.addEventListener('click', () => {
+    _tileChainMode = !_tileChainMode;
+    _tileChainBtn.textContent = _tileChainMode ? '⛓ Chain: ON' : '⛓ Chain: OFF';
+    if (!_tileChainMode) _tileChain = [];
+  });
+  _tilePanel.appendChild(_tileChainBtn);
+
+  const _tilePlayChainBtn = document.createElement('button');
+  _tilePlayChainBtn.textContent = '▶ Play Chain (0)';
+  _tilePlayChainBtn.style.cssText =
+    'width:100%;min-height:44px;margin-bottom:8px;border-radius:8px;border:1px solid rgba(120,255,180,0.5);background:rgba(0,40,20,0.8);color:#7dffb0;font-size:14px;font-weight:bold;cursor:pointer;';
+  _tilePlayChainBtn.addEventListener('click', async () => {
+    if (_tileChain.length === 0) return;
+    const tiles = _tileChain.slice();
+    _tileChain = [];
+    _tilePlayChainBtn.textContent = '▶ Play Chain (0)';
+    _tilePanel.style.display = 'none';
+    await _playTiles(tiles);
+  });
+  _tilePanel.appendChild(_tilePlayChainBtn);
+
+  const _tileStopBtn = document.createElement('button');
+  _tileStopBtn.textContent = '⏹ Stop Tile';
+  _tileStopBtn.style.cssText =
+    'width:100%;min-height:44px;margin-bottom:12px;border-radius:8px;border:1px solid rgba(255,120,120,0.5);background:rgba(40,0,0,0.8);color:#ff8080;font-size:14px;font-weight:bold;cursor:pointer;';
+  _tileStopBtn.addEventListener('click', () => {
+    _handoffFromTile(motionTilePlayer.stop());
+    _tilePanel.style.display = 'none';
+  });
+  _tilePanel.appendChild(_tileStopBtn);
+
+  // One button per catalog tile
+  for (const entry of TILE_CATALOG) {
+    const btn = document.createElement('button');
+    btn.textContent = entry.label;
+    btn.style.cssText =
+      'width:100%;min-height:44px;margin-bottom:6px;border-radius:8px;border:1px solid rgba(180,120,255,0.3);background:rgba(30,10,55,0.8);color:#e8d8ff;font-size:14px;cursor:pointer;text-align:left;padding:0 12px;';
+    btn.addEventListener('click', async () => {
+      const tile = await motionTilePlayer.loadTile(entry.url);
+      if (!tile) {
+        Logger.warn('App', `Could not load tile: ${entry.label}`);
+        return;
+      }
+      if (_tileChainMode) {
+        _tileChain.push(tile);
+        _tilePlayChainBtn.textContent = `▶ Play Chain (${_tileChain.length})`;
+        Logger.info('App', `Queued tile: ${entry.label} (chain: ${_tileChain.length})`);
+      } else {
+        _tilePanel.style.display = 'none';
+        await _playTiles([tile]);
+      }
+    });
+    _tilePanel.appendChild(btn);
+  }
+
+  _tileBtn.addEventListener('click', () => {
+    const show = _tilePanel.style.display === 'none';
+    _tilePanel.style.display = show ? 'block' : 'none';
+  });
+
+  // Start tile playback anchored at the plane's current state.
+  // Disables manual control; the animate loop sources aircraftState from the player.
+  async function _playTiles(tiles) {
+    if (!aircraftManager.group) return;
+    const origin = {
+      position: flightController.position.clone(),
+      yaw: flightController.yaw,
+    };
+    if (motionTilePlayer.play(tiles, origin)) {
+      flightController.enabled = false;
+      _tileBtn.textContent = '🎬 Playing…';
+      Logger.info('App', `Playing ${tiles.length} motion tile(s)`);
+    } else {
+      Logger.warn('App', 'Could not start motion tile playback');
+    }
+  }
+
+  // Handoff: sync flight controller to tile exit state, re-enable manual control.
+  function _handoffFromTile(finalState) {
+    if (finalState) {
+      flightController.position.copy(finalState.position);
+      flightController.setOrientation(finalState.yaw, finalState.pitch);
+      flightController.yawRate = 0;
+      flightController.pitchRate = 0;
+      _prevPos.copy(finalState.position);
+    }
+    flightController.enabled = true;
+    _tileBtn.textContent = '🎬 Tiles';
+  }
+
   // --- Logger panel ---
   Logger.bindPanel(document.getElementById('log-panel'));
   document.getElementById('log-panel-clear').addEventListener('click', () => Logger.clear());
@@ -785,7 +906,11 @@ async function initApp() {
     // ahead of the nose, and if the aircraft touches dirt, trigger a crash
     // animation chosen from the impact parameters. Controls freeze while the
     // wreck tumbles; FLY AGAIN respawns 1200m above the crash site.
-    const manualFlight = aircraftState && !flightPlanRecorder.autopilotActive && !benchmarkRunner.isRunning();
+    const manualFlight =
+      aircraftState &&
+      !flightPlanRecorder.autopilotActive &&
+      !benchmarkRunner.isRunning() &&
+      !motionTilePlayer.isPlaying();
     if (dt > 0 && !crashing) {
       const dx = flightController.position.x - _prevPos.x;
       const dy = flightController.position.y - _prevPos.y;
