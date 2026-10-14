@@ -34,6 +34,8 @@ import LiveTraffic from './traffic/LiveTraffic.js';
 import FlightPlanRecorder from './flightplan/FlightPlanRecorder.js';
 import FlightRecorder from './cinematography/FlightRecorder.js';
 import GhostPlayer from './cinematography/GhostPlayer.js';
+import CameraTrackRecorder from './cinematography/CameraTrackRecorder.js';
+import CameraTrackPlayer from './cinematography/CameraTrackPlayer.js';
 import Stats from 'stats.js';
 import { detectTileMode, getTileMode } from './geo/TileUrls.js';
 
@@ -388,6 +390,61 @@ async function initApp() {
     ghostPlayer.setTrack(flightRecorder.keyframes);
   }
 
+  // --- Camera tracks: record + play back camera motion ---
+  const cameraTrackRecorder = new CameraTrackRecorder();
+  const cameraTrackPlayer = new CameraTrackPlayer();
+  if (cameraTrackRecorder.load()) {
+    cameraTrackPlayer.setTrack(cameraTrackRecorder.keyframes);
+    Logger.info('App', `Restored camera track: ${cameraTrackRecorder.getKeyframeCount()} keyframes`);
+  }
+
+  // Camera record button (44px touch target) — stacked above ghost toggle
+  const _camRecBtn = document.createElement('button');
+  _camRecBtn.id = 'cine-cam-record';
+  _camRecBtn.textContent = '📷 Cam: REC';
+  _camRecBtn.setAttribute('aria-label', 'Record camera path');
+  _camRecBtn.style.cssText =
+    'position:fixed;bottom:248px;right:12px;z-index:50;min-width:44px;min-height:44px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,180,80,0.5);background:rgba(40,20,0,0.75);color:#ffb450;font-size:14px;font-weight:bold;cursor:pointer;backdrop-filter:blur(4px);';
+  _camRecBtn.addEventListener('click', () => {
+    if (cameraTrackRecorder.isRecording()) {
+      const n = cameraTrackRecorder.stop();
+      _camRecBtn.textContent = '📷 Cam: REC';
+      _camRecBtn.style.color = '#ffb450';
+      Logger.info('App', `Camera recording stopped: ${n} keyframes saved`);
+      cameraTrackPlayer.setTrack(cameraTrackRecorder.keyframes);
+    } else {
+      if (cameraTrackRecorder.start(camera)) {
+        _camRecBtn.textContent = '■ STOP';
+        _camRecBtn.style.color = '#ff0000';
+        Logger.info('App', 'Recording camera path…');
+      }
+    }
+  });
+  document.body.appendChild(_camRecBtn);
+
+  // Camera play button (44px touch target)
+  const _camPlayBtn = document.createElement('button');
+  _camPlayBtn.id = 'cine-cam-play';
+  _camPlayBtn.textContent = '▶️ Cam';
+  _camPlayBtn.setAttribute('aria-label', 'Play back camera track');
+  _camPlayBtn.style.cssText =
+    'position:fixed;bottom:304px;right:12px;z-index:50;min-width:44px;min-height:44px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,180,80,0.5);background:rgba(40,20,0,0.75);color:#ffb450;font-size:14px;font-weight:bold;cursor:pointer;backdrop-filter:blur(4px);';
+  _camPlayBtn.addEventListener('click', () => {
+    if (cameraTrackPlayer.isPlaying()) {
+      cameraTrackPlayer.stop();
+      _camPlayBtn.textContent = '▶️ Cam';
+      Logger.info('App', 'Camera track playback stopped');
+    } else {
+      if (cameraTrackPlayer.play()) {
+        _camPlayBtn.textContent = '⏹ Cam';
+        Logger.info('App', 'Camera track playback started');
+      } else {
+        Logger.warn('App', 'No camera track to play — hit 📷 Cam: REC first');
+      }
+    }
+  });
+  document.body.appendChild(_camPlayBtn);
+
   // --- Logger panel ---
   Logger.bindPanel(document.getElementById('log-panel'));
   document.getElementById('log-panel-clear').addEventListener('click', () => Logger.clear());
@@ -646,13 +703,33 @@ async function initApp() {
     flightController.update(dt);
     liveTraffic.tick(dt);
     flightRecorder.tick();
+    cameraTrackRecorder.tick();
     ghostPlayer.tick();
     benchmarkRunner.tickPath(dt, flightController, renderer);
 
     // --- Aircraft state ---
     let aircraftState = null;
 
-    if (flightPlanRecorder.autopilotActive && flightPlanRecorder.getPlan()) {
+    if (motionTilePlayer.isPlaying()) {
+      const tileState = motionTilePlayer.tick();
+      if (tileState) {
+        aircraftState = tileState;
+      }
+      // If tick() just finished the sequence, hand off to manual control.
+      if (!motionTilePlayer.isPlaying()) {
+        _handoffFromTile(tileState);
+        if (!aircraftState) {
+          aircraftState = {
+            position: flightController.position,
+            yaw: flightController.yaw,
+            pitch: flightController.pitch,
+            yawRate: flightController.yawRate,
+            pitchRate: flightController.pitchRate,
+            quaternion: flightController.quaternion,
+          };
+        }
+      }
+    } else if (flightPlanRecorder.autopilotActive && flightPlanRecorder.getPlan()) {
       const plan = flightPlanRecorder.getPlan();
       const ok = plan.update(dt);
       if (!ok) {
@@ -766,6 +843,9 @@ async function initApp() {
     // Crash camera shake: decaying random offset while the wreck tumbles.
     // Safe here — both camera modes rebuild camera position/quaternion above.
     if (crashing) crashFX.applyShake(camera);
+
+    // Camera track playback overrides the live camera (choreographed shots).
+    cameraTrackPlayer.tick(camera);
 
     // --- Environment phase ---
     cloudLayer.update(dt, camera.position, aircraftState ? aircraftState.pitch : 0);
