@@ -1,47 +1,13 @@
 import * as THREE from 'three';
-import { CONFIG } from '../utils/config.js';
 import Logger from '../utils/Logger.js';
-import { CLEAR_COLOR, AMBIENT_INTENSITY, DIR_LIGHT_INTENSITY, DIR_LIGHT_POSITION } from '../constants/rendering.js';
+import { AMBIENT_INTENSITY, DIR_LIGHT_INTENSITY, DIR_LIGHT_POSITION } from '../constants/rendering.js';
 import { DEFAULT_FOV, DEFAULT_NEAR, DEFAULT_FAR, REALWORLD_START_ALTITUDE } from '../constants/camera.js';
+import { createRenderer as createRendererFromModule } from '../render/Renderer.js';
 
 export async function createRenderer() {
-  // iPad/Safari safety: WebGPU can be missing or unstable there. Try WebGPU
-  // first; fall back to the WebGL backend (same TSL scene graph, no rewrite).
-  // Override with ?renderer=webgl|webgpu.
-  let forceWebGL = false;
-  try {
-    const param = new URLSearchParams(location.search).get('renderer');
-    if (param === 'webgl') forceWebGL = true;
-    else if (param === 'webgpu') forceWebGL = false;
-    else if (typeof navigator !== 'undefined' && !navigator.gpu) forceWebGL = true;
-  } catch {
-    /* non-browser context — default to WebGPU attempt */
-  }
-
-  let renderer;
-  if (!forceWebGL) {
-    try {
-      renderer = new THREE.WebGPURenderer({
-        antialias: true,
-        powerPreference: 'high-performance',
-        trackTimestamp: true,
-      });
-      await renderer.init();
-      Logger.info('Renderer', 'WebGPU backend');
-    } catch (err) {
-      Logger.warn('Renderer', 'WebGPU init failed, falling back to WebGL: ' + err.message);
-      forceWebGL = true;
-    }
-  }
-  if (forceWebGL) {
-    renderer = new THREE.WebGPURenderer({ forceWebGL: true, antialias: true });
-    await renderer.init();
-    Logger.info('Renderer', 'WebGL backend (TSL fallback)');
-  }
-
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.maxPixelRatio));
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(CLEAR_COLOR);
+  // Delegate to the js/render/Renderer.js abstraction (WebGPU-first with
+  // WebGL2 fallback). Then attach canvas and context-loss handlers.
+  const renderer = await createRendererFromModule();
 
   // --- Context-loss guard -------------------------------------------------
   // Handle GPU context loss by surfacing a recoverable state instead of
