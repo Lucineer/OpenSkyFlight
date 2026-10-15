@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Asset Factory — Library Viewer (dev only, not deployed)</title>
+<style>
+  body { margin: 0; background: #0a0e14; color: #dfe6ee;
+         font-family: system-ui, sans-serif; }
+  #bar { padding: 12px 16px; display: flex; gap: 12px; align-items: center;
+         background: #11161f; border-bottom: 1px solid #232c3a; flex-wrap: wrap; }
+  #bar h1 { font-size: 16px; margin: 0; }
+  #bar select, #bar button { font-size: 14px; padding: 8px 12px; min-height: 44px; }
+  #info { font-size: 13px; color: #8a97a8; }
+  #view { width: 100vw; height: calc(100vh - 69px); display: block; }
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="bar">
+  <h1>Asset Factory</h1>
+  <select id="pick"></select>
+  <button id="spin">Spin: on</button>
+  <span id="info"></span>
+</div>
+<canvas id="view"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { buildMeshFromData } from '../js/assets/ProceduralAssetLoader.js';
+
+const canvas = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0e14);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x2a2620, 1.1));
+const sun = new THREE.DirectionalLight(0xfff2dd, 2.2);
+sun.position.set(8, 14, 6);
+scene.add(sun);
+const grid = new THREE.GridHelper(40, 20, 0x2a3a4a, 0x1a2430);
+scene.add(grid);
+
+let mesh = null, spin = true, manifest = null;
+const BASE = '/assets/proc/';  // served path once deployed
+
+function resize() {
+  const w = innerWidth, h = innerHeight - 69;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+async function loadManifest() {
+  try {
+    const r = await fetch(BASE + 'manifest.json');
+    manifest = await r.json();
+  } catch (e) {
+    document.getElementById('info').textContent =
+      'No manifest at ' + BASE + 'manifest.json — copy factory output to assets/proc/';
+    return;
+  }
+  const pick = document.getElementById('pick');
+  manifest.assets.forEach((a, i) => {
+    const o = document.createElement('option');
+    o.value = i;
+    o.textContent = `${a.type}/${a.style} — ${a.file} (${a.triangles} tris)`;
+    pick.appendChild(o);
+  });
+  pick.onchange = () => showAsset(+pick.value);
+  showAsset(0);
+}
+
+async function showAsset(i) {
+  const a = manifest.assets[i];
+  const d = await (await fetch(BASE + a.file)).json();
+  if (mesh) { scene.remove(mesh); mesh.geometry.dispose(); }
+  mesh = buildMeshFromData(d);
+  scene.add(mesh);
+  // frame it
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = box.getSize(new THREE.Vector3()).length();
+  const c = box.getCenter(new THREE.Vector3());
+  camera.position.set(c.x + size * 0.9, c.y + size * 0.55, c.z + size * 0.9);
+  controls.target.copy(c);
+  document.getElementById('info').textContent =
+    `${d.name} — ${d.triangleCount} tris, batch ${a.batch}`;
+}
+
+document.getElementById('spin').onclick = (e) => {
+  spin = !spin;
+  e.target.textContent = 'Spin: ' + (spin ? 'on' : 'off');
+};
+
+renderer.setAnimationLoop(() => {
+  if (mesh && spin) mesh.rotation.y += 0.008;
+  controls.update();
+  renderer.render(scene, camera);
+});
+
+loadManifest();
+</script>
+</body>
+</html>
