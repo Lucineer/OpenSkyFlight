@@ -12,7 +12,12 @@
  *
  * Feeds FlightController through addLook() / setTouchMove(), so the
  * desktop keyboard+mouse path is completely untouched.
+ *
+ * Tilt-to-fly (TiltController): when enabled, the iPad itself becomes the
+ * yoke and the floating joystick is suppressed — tilt feeds the same
+ * setTouchMove() interface, so behavior is identical.
  */
+import TiltController from './TiltController.js';
 const TOUCH_LOOK_GAIN = 1.6; // finger drags are shorter than mouse sweeps
 const STICK_RADIUS_PX = 60;
 const STICK_ZONE_FRACTION = 0.45; // left portion of screen = joystick
@@ -40,6 +45,7 @@ export default class TouchControls {
     this._buildUI();
     this._setupThrottle();
     this._setupLocation();
+    this._setupTilt();
 
     // Document-level so touches over the HUD overlay canvas also steer.
     // Touches that begin on real UI controls are left alone.
@@ -111,6 +117,7 @@ export default class TouchControls {
     if (help) {
       help.innerHTML =
         'Left thumb : virtual stick — X strafe, Y climb/descend<br>' +
+        'TILT : tilt the iPad to fly (tap again to turn off, double-tap for sensitivity)<br>' +
         'Left edge slider : throttle — cruise speed (persists)<br>' +
         'Right thumb : drag to look around<br>' +
         'VIEW : cockpit/chase | TEX : texture mode | HUD : instruments | LOC : location<br>' +
@@ -211,6 +218,49 @@ export default class TouchControls {
   }
 
   /**
+   * Tilt-to-fly: TILT button in the action row. Single tap toggles tilt
+   * (first tap on iOS runs the permission request); double-tap cycles
+   * sensitivity. While tilt is active the floating joystick is suppressed
+   * (body.tilt-active) and a tilt indicator gauge is shown instead.
+   * Hidden entirely where DeviceOrientationEvent is unavailable.
+   */
+  _setupTilt() {
+    if (!TiltController.isSupported()) return;
+    const row = this.ui.querySelector('#tc-buttons');
+    if (!row) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'tc-tilt';
+    btn.setAttribute('aria-label', 'Toggle tilt-to-fly controls');
+    btn.setAttribute('aria-pressed', 'false');
+    btn.textContent = 'TILT';
+    // Insert before LOC so TILT sits with the view-mode buttons.
+    const locBtn = row.querySelector('#tc-loc');
+    row.insertBefore(btn, locBtn);
+
+    this.tilt = new TiltController(this.fc, {
+      onStateChange: (enabled, sensitivity) => {
+        btn.setAttribute('aria-pressed', String(enabled));
+        btn.classList.toggle('active', enabled);
+        const lbl = { low: 'L', medium: 'M', high: 'H' }[sensitivity] || '';
+        btn.textContent = enabled ? `TILT·${lbl}` : 'TILT';
+      },
+    });
+
+    const tap = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.tilt.handleButtonTap();
+    };
+    btn.addEventListener('touchstart', tap, { passive: false });
+    btn.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      this.tilt.handleButtonTap();
+    });
+  }
+
+  /**
    * Location picker: search any place via Nominatim or jump to a preset.
    * Choosing a location reloads the app with ?lat= & ?lon= so the world
    * re-initializes around the new coordinates.
@@ -282,13 +332,16 @@ export default class TouchControls {
   _onTouchStart = (e) => {
     if (this._isUiTouch(e.target)) return;
     e.preventDefault();
+    // Tilt mode replaces the joystick: left-zone touches become look-drag
+    // instead of stick engagement.
+    const tiltActive = document.body.classList.contains('tilt-active');
     for (const t of e.changedTouches) {
       const inStickZone = t.clientX < window.innerWidth * STICK_ZONE_FRACTION;
-      if (inStickZone && this.stickTouchId === null) {
+      if (inStickZone && this.stickTouchId === null && !tiltActive) {
         this.stickTouchId = t.identifier;
         this.stickOrigin = { x: t.clientX, y: t.clientY };
         this._showStick(t.clientX, t.clientY, 0, 0);
-      } else if (!inStickZone && this.lookTouchId === null) {
+      } else if ((!inStickZone || tiltActive) && this.lookTouchId === null) {
         this.lookTouchId = t.identifier;
         this.lastLook = { x: t.clientX, y: t.clientY };
       }
@@ -348,6 +401,7 @@ export default class TouchControls {
     document.removeEventListener('touchmove', this._onTouchMove);
     document.removeEventListener('touchend', this._onTouchEnd);
     document.removeEventListener('touchcancel', this._onTouchEnd);
+    if (this.tilt) this.tilt.dispose();
     this.ui.remove();
     document.body.classList.remove('touch');
   }
