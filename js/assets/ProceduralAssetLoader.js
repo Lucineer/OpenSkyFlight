@@ -10,6 +10,7 @@
  *   const mesh = await loadProceduralAsset('/assets/proc/plane-bush-00007.json');
  *   scene.add(mesh);
  */
+import * as THREE from 'three';
 
 export async function loadProceduralAsset(url) {
   const res = await fetch(url);
