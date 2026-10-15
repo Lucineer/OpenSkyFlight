@@ -679,6 +679,19 @@ async function initApp() {
   }
 
   // --- Render loop ---
+  // Handoff after a motion-tile sequence finishes: sync the flight
+  // controller to the tile's exit state and restore manual control.
+  function _handoffFromTile(tileState) {
+    if (!tileState) return;
+    flightController.position.copy(tileState.position);
+    flightController.setOrientation(tileState.yaw, tileState.pitch);
+    flightController.yawRate = 0;
+    flightController.pitchRate = 0;
+    flightController.enabled = true;
+    _prevPos.copy(flightController.position);
+    Logger.info('App', 'Tile playback complete — manual control restored');
+  }
+
   let prevTime = performance.now();
   let _bankRoll = 0;
   let _booted = false; // boot overlay dismissed once terrain tiles are ready
