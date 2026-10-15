@@ -37,6 +37,7 @@ export class RadioChatbot {
     this.collapsed = false;
     this.recognition = null;
     this.listening = false;
+    this.session = null; // per push-to-talk session token (see startListening)
     this.speechEnabled = true;
     this.waveformCanvas = null;
     this.waveformCtx = null;
@@ -141,6 +142,9 @@ export class RadioChatbot {
         this.startListening();
       });
       this.pttButton.addEventListener('pointerup', () => this.stopListening());
+      // iOS fires pointercancel (not pointerup) when the system interrupts a touch —
+      // without this, recognition hangs until the safety timeout.
+      this.pttButton.addEventListener('pointercancel', () => this.stopListening());
       this.pttButton.addEventListener('pointerleave', () => {
         if (this.listening) this.stopListening();
       });
@@ -172,11 +176,21 @@ export class RadioChatbot {
     if (!this.SRClass || this.listening) return;
     this.primeSpeech(); // iOS gesture requirement
 
+    // Abandon any stale session so its late onend can't submit old text.
+    if (this.session) this.session.submit = false;
+    // Per-session token: onend must submit this session's transcript even though
+    // stopListening() already cleared this.listening by the time onend fires.
+    // (pointerup -> stopListening -> recognition.stop() -> onend, in that order.)
+    const session = (this.session = { submit: true });
+
     // Recreate per use (iOS quirk: reuse causes stale results)
     this.recognition = new this.SRClass();
     this.recognition.lang = 'en-US';
-    // iOS Safari is flaky with interimResults=true — use false for reliability
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    // iOS Safari is flaky with interimResults=true — use false for reliability.
+    // iPadOS in desktop mode sends a Mac user agent, so also check touch points.
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     this.recognition.interimResults = !isIOS;
     this.recognition.continuous = false;
     this.recognition.maxAlternatives = 1;
@@ -189,6 +203,7 @@ export class RadioChatbot {
     // Safety timeout: if iOS silently fails, don't hang on "LISTENING…"
     listenTimeout = setTimeout(() => {
       if (this.listening && !gotResult) {
+        session.submit = false; // timeout already messaged the user; keep onend quiet
         this.stopListening();
         this.addBotMessage(
           'CO-PILOT',
@@ -212,6 +227,7 @@ export class RadioChatbot {
 
     this.recognition.onerror = (event) => {
       clearTimeout(listenTimeout);
+      session.submit = false; // onerror already messaged the user; keep onend quiet
       this.stopListening();
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         this.addBotMessage('CO-PILOT', "Mic access was blocked — no worries, type instead and I'll still answer.");
@@ -224,15 +240,19 @@ export class RadioChatbot {
 
     this.recognition.onend = () => {
       clearTimeout(listenTimeout);
-      const wasListening = this.listening;
+      // NOTE: don't read this.listening here — stopListening() (called on
+      // pointerup before onend fires) already cleared it, which is why release
+      // used to drop the transcript. The per-session token survives it.
+      const shouldSubmit = session.submit;
+      if (this.session === session) this.session = null;
       this.stopListening();
       // Use final transcript, fall back to last interim (iOS often never marks final)
       const text = finalTranscript.trim() || lastInterim.trim();
-      if (wasListening && text) {
+      if (shouldSubmit && text) {
         this.handleUserInput(text);
-      } else if (wasListening && !gotResult) {
+      } else if (shouldSubmit && !gotResult) {
         // onend with no result at all = silent iOS failure, timeout already handles messaging
-      } else if (wasListening) {
+      } else if (shouldSubmit) {
         this.addBotMessage('CO-PILOT', "Didn't catch that — try again or type it below.");
       }
     };
