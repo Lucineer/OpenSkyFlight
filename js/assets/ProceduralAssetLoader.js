@@ -24,12 +24,9 @@ export async function loadProceduralAsset(url) {
 
 export function buildMeshFromData(d) {
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position',
-    new THREE.Float32BufferAttribute(d.positions, 3));
-  geo.setAttribute('normal',
-    new THREE.Float32BufferAttribute(d.normals, 3));
-  geo.setAttribute('color',
-    new THREE.Float32BufferAttribute(d.colors, 3));
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(d.positions, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(d.normals, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(d.colors, 3));
   geo.setIndex(d.indices);
   const mat = new THREE.MeshStandardMaterial({
     vertexColors: true,
