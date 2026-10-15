@@ -827,7 +827,11 @@ async function initApp() {
 
     // --- Landing Challenge: detect touchdown, update PAPI, show HUD ---
     // Only run during manual flight (not tiles, autopilot, or benchmark)
-    const _landingManual = aircraftState && !flightPlanRecorder.autopilotActive && !benchmarkRunner.isRunning() && !motionTilePlayer.isPlaying();
+    const _landingManual =
+      aircraftState &&
+      !flightPlanRecorder.autopilotActive &&
+      !benchmarkRunner.isRunning() &&
+      !motionTilePlayer.isPlaying();
     if (aircraftState && _landingManual && !crashing) {
       landingDetector.tick(aircraftState, _vertSpeed, dt);
       papiLights.update(aircraftState.position);
@@ -839,8 +843,11 @@ async function initApp() {
         const best = landingVerdict.getBest();
         const bestStr = best ? ` | Best: ${best.score}` : '';
         _landingHud.style.display = 'block';
-        _landingHud.innerHTML = `🛬 LANDING CHALLENGE — Rwy ${rwyName}${bestStr}` +
-          (papi ? `<br><span style="font-size:22px;">${papi.symbols}</span> <span style="font-size:13px;">${papi.message}</span>` : '');
+        _landingHud.innerHTML =
+          `🛬 LANDING CHALLENGE — Rwy ${rwyName}${bestStr}` +
+          (papi
+            ? `<br><span style="font-size:22px;">${papi.symbols}</span> <span style="font-size:13px;">${papi.message}</span>`
+            : '');
       } else {
         _landingHud.style.display = 'none';
       }
