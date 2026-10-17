@@ -1,0 +1,138 @@
+{
+ "batches": [
+  {
+   "id": "batch-1792025270-7676",
+   "seed": 893607676,
+   "count": 8,
+   "at": "2026-10-15T00:47:51Z"
+  },
+  {
+   "id": "batch-1792025276-8171",
+   "seed": 925568171,
+   "count": 8,
+   "at": "2026-10-15T00:47:56Z"
+  }
+ ],
+ "assets": [
+  {
+   "file": "building-12282.json",
+   "type": "building",
+   "style": "house",
+   "triangles": 150,
+   "batch": "batch-1792025270-7676",
+   "seed": 76112282
+  },
+  {
+   "file": "tree-51976.json",
+   "type": "tree",
+   "style": "hemlock",
+   "triangles": 268,
+   "batch": "batch-1792025270-7676",
+   "seed": 466651976
+  },
+  {
+   "file": "tree-24516.json",
+   "type": "tree",
+   "style": "spruce",
+   "triangles": 220,
+   "batch": "batch-1792025270-7676",
+   "seed": 15024516
+  },
+  {
+   "file": "plane-88524.json",
+   "type": "plane",
+   "style": "fighter",
+   "triangles": 253,
+   "batch": "batch-1792025270-7676",
+   "seed": 524588524
+  },
+  {
+   "file": "plane-03259.json",
+   "type": "plane",
+   "style": "bush",
+   "triangles": 441,
+   "batch": "batch-1792025270-7676",
+   "seed": 858703259
+  },
+  {
+   "file": "building-66383.json",
+   "type": "building",
+   "style": "cannery",
+   "triangles": 76,
+   "batch": "batch-1792025270-7676",
+   "seed": 665966383
+  },
+  {
+   "file": "tree-13866.json",
+   "type": "tree",
+   "style": "snag",
+   "triangles": 108,
+   "batch": "batch-1792025270-7676",
+   "seed": 530613866
+  },
+  {
+   "file": "plane-49815.json",
+   "type": "plane",
+   "style": "bush",
+   "triangles": 441,
+   "batch": "batch-1792025270-7676",
+   "seed": 747649815
+  },
+  {
+   "file": "boat-13932.json",
+   "type": "boat",
+   "style": "fishing",
+   "triangles": 246,
+   "batch": "batch-1792025276-8171",
+   "seed": 975013932
+  },
+  {
+   "file": "plane-77034.json",
+   "type": "plane",
+   "style": "fighter",
+   "triangles": 253,
+   "batch": "batch-1792025276-8171",
+   "seed": 690677034
+  },
+  {
+   "file": "boat-85766.json",
+   "type": "boat",
+   "style": "sailboat",
+   "triangles": 178,
+   "batch": "batch-1792025276-8171",
+   "seed": 940085766
+  },
+  {
+   "file": "boat-97566.json",
+   "type": "boat",
+   "style": "skiff",
+   "triangles": 134,
+   "batch": "batch-1792025276-8171",
+   "seed": 133097566
+  },
+  {
+   "file": "tree-35362.json",
+   "type": "tree",
+   "style": "hemlock",
+   "triangles": 244,
+   "batch": "batch-1792025276-8171",
+   "seed": 531435362
+  },
+  {
+   "file": "boat-97384.json",
+   "type": "boat",
+   "style": "skiff",
+   "triangles": 134,
+   "batch": "batch-1792025276-8171",
+   "seed": 155997384
+  },
+  {
+   "file": "boat-06389.json",
+   "type": "boat",
+   "style": "fishing",
+   "triangles": 234,
+   "batch": "batch-1792025276-8171",
+   "seed": 274506389
+  }
+ ]
+}
