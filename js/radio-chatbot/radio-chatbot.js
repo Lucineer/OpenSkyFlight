@@ -1,8 +1,10 @@
 /**
  * Sitka Radio — v1 standalone prototype.
  *
- * Push-to-talk radio chatbot. Client-side only, no backend.
- * - Voice input via Web Speech API (webkitSpeechRecognition on iPad)
+ * Push-to-talk radio chatbot.
+ * - Voice input via Web Speech API (webkitSpeechRecognition on iPad),
+ *   with a server fallback: MediaRecorder → Whisper worker when Web
+ *   Speech is unavailable or has failed on this device
  * - Text fallback always available
  * - SpeechSynthesis for spoken responses
  * - Thumbs up/down → localStorage (v2 will POST to Worker)
@@ -19,8 +21,18 @@
  */
 
 import { matchIntent, setGameState } from './responses.js';
+import { transcriptForRadio } from './place-name-corrections.js';
 
 const FEEDBACK_KEY = 'sitka-radio-feedback-v1';
+
+// Server-STT fallback: when Web Speech is unavailable — or has failed once
+// on this device (iPad Safari) — PTT records with MediaRecorder and POSTs
+// the clip to this Whisper worker instead. Transcription round-trip
+// verified 2026-10-20 ("Fly to Sitka, then turn left toward Mount
+// Edgecumbe." — Whisper returned "Edgecom", hence the correction pass).
+const STT_URL = 'https://sitka-stt-poc.magnus-digennaro.workers.dev/';
+const STT_MAX_MS = 15000; // MediaRecorder never auto-stops; hard cap.
+const SERVER_STT_KEY = 'sr:server-stt'; // localStorage: prefer server path
 
 // Simulated radio latency: 1–3s before response appears.
 const LATENCY_MIN = 1000;
@@ -38,6 +50,10 @@ export class RadioChatbot {
     this.recognition = null;
     this.listening = false;
     this.session = null; // per push-to-talk session token (see startListening)
+    this.serverSTT = false; // MediaRecorder → Whisper worker available
+    this.preferServerSTT = false; // use the server path for PTT
+    this.serverRecorder = null; // active { recorder, stream, session, chunks }
+    this.serverStopTimer = null;
     this.speechEnabled = true;
     this.waveformCanvas = null;
     this.waveformCtx = null;
@@ -56,6 +72,34 @@ export class RadioChatbot {
     this.speechInputSupported = !!SR;
     this.SRClass = SR || null;
     this.speechOutputSupported = 'speechSynthesis' in window;
+    // Server-STT fallback needs MediaRecorder + mic access.
+    this.serverSTT =
+      typeof window.MediaRecorder !== 'undefined' &&
+      !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    // Prefer the server path when Web Speech is absent, or once it has
+    // failed on this device (preference persisted by enableServerSTTOnce).
+    this.preferServerSTT = this.serverSTT && !this.speechInputSupported;
+    try {
+      if (this.serverSTT && localStorage.getItem(SERVER_STT_KEY) === '1') {
+        this.preferServerSTT = true;
+      }
+    } catch {
+      /* private mode */
+    }
+  }
+
+  // After any Web Speech failure, permanently prefer the server path on
+  // this device. Returns true only the first time it engages.
+  enableServerSTTOnce(reason) {
+    if (!this.serverSTT || this.preferServerSTT) return false;
+    this.preferServerSTT = true;
+    try {
+      localStorage.setItem(SERVER_STT_KEY, '1');
+    } catch {
+      /* private mode */
+    }
+    console.debug('[sitka-radio] server STT engaged:', reason);
+    return true;
   }
 
   loadFeedback() {
@@ -91,12 +135,12 @@ export class RadioChatbot {
       <div class="sr-transcript" aria-live="polite"></div>
       <div class="sr-controls">
         <canvas class="sr-waveform" width="280" height="36" aria-hidden="true"></canvas>
-        <button class="sr-ptt" ${this.speechInputSupported ? '' : 'disabled'}>
+        <button class="sr-ptt" ${this.speechInputSupported || this.serverSTT ? '' : 'disabled'}>
           🎙 HOLD TO TALK
         </button>
         <input class="sr-text" type="text" placeholder="type instead…" enterkeyhint="send" />
       </div>
-      <div class="sr-footnote">v1 prototype · responses are pre-written · ${this.speechInputSupported ? 'voice + text' : 'text only on this browser'}</div>
+      <div class="sr-footnote">v1 prototype · responses are pre-written · ${this.speechInputSupported || this.serverSTT ? 'voice + text' : 'text only on this browser'}</div>
     `;
 
     this.transcriptEl = this.root.querySelector('.sr-transcript');
@@ -135,8 +179,9 @@ export class RadioChatbot {
       }
     });
 
-    // Push-to-talk: pointerdown starts, pointerup/leave stops
-    if (this.speechInputSupported) {
+    // Push-to-talk: pointerdown starts, pointerup/leave stops.
+    // Wired when EITHER input path exists: Web Speech or the server fallback.
+    if (this.speechInputSupported || this.serverSTT) {
       this.pttButton.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         this.startListening();
@@ -173,7 +218,13 @@ export class RadioChatbot {
   // Speech input
   // ------------------------------------------------------------------
   startListening() {
-    if (!this.SRClass || this.listening) return;
+    if (this.listening) return;
+    // Server path first when Web Speech is absent or has failed here before.
+    if (this.preferServerSTT && this.serverSTT) {
+      this.startListeningServer();
+      return;
+    }
+    if (!this.SRClass) return;
     this.primeSpeech(); // iOS gesture requirement
 
     // Abandon any stale session so its late onend can't submit old text.
@@ -205,10 +256,17 @@ export class RadioChatbot {
       if (this.listening && !gotResult) {
         session.submit = false; // timeout already messaged the user; keep onend quiet
         this.stopListening();
-        this.addBotMessage(
-          'CO-PILOT',
-          "Voice isn't cooperating on this device — type below and I'll answer the same way.",
-        );
+        if (this.enableServerSTTOnce('web-speech timeout')) {
+          this.addBotMessage(
+            'CO-PILOT',
+            "Voice isn't cooperating on this device — I've switched to the server mic. Hold the button and talk again, or type below.",
+          );
+        } else {
+          this.addBotMessage(
+            'CO-PILOT',
+            "Voice isn't cooperating on this device — type below and I'll answer the same way.",
+          );
+        }
       }
     }, 12000);
 
@@ -229,6 +287,10 @@ export class RadioChatbot {
       clearTimeout(listenTimeout);
       session.submit = false; // onerror already messaged the user; keep onend quiet
       this.stopListening();
+      // Any failure except a hard mic denial: next hold uses the server path.
+      if (event.error !== 'not-allowed') {
+        this.enableServerSTTOnce('web-speech error: ' + event.error);
+      }
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         this.addBotMessage('CO-PILOT', "Mic access was blocked — no worries, type instead and I'll still answer.");
       } else if (event.error === 'no-speech' || event.error === 'aborted') {
@@ -249,10 +311,13 @@ export class RadioChatbot {
       // Use final transcript, fall back to last interim (iOS often never marks final)
       const text = finalTranscript.trim() || lastInterim.trim();
       if (shouldSubmit && text) {
-        this.handleUserInput(text);
+        // Correction pass: Web Speech mangles Sitka place names too.
+        this.handleUserInput(transcriptForRadio(text));
       } else if (shouldSubmit && !gotResult) {
         // onend with no result at all = silent iOS failure, timeout already handles messaging
+        this.enableServerSTTOnce('web-speech silent failure');
       } else if (shouldSubmit) {
+        this.enableServerSTTOnce('web-speech empty result');
         this.addBotMessage('CO-PILOT', "Didn't catch that — try again or type it below.");
       }
     };
@@ -269,6 +334,11 @@ export class RadioChatbot {
   }
 
   stopListening() {
+    // A server recording in progress stops through its own path.
+    if (this.serverRecorder) {
+      this.stopListeningServer();
+      return;
+    }
     if (this.recognition) {
       try {
         this.recognition.stop();
@@ -281,6 +351,107 @@ export class RadioChatbot {
     this.pttButton.classList.remove('sr-listening');
     this.pttButton.textContent = '🎙 HOLD TO TALK';
     this.drawWaveform(false);
+  }
+
+  // ------------------------------------------------------------------
+  // Server speech input (MediaRecorder → Whisper worker)
+  // ------------------------------------------------------------------
+  async startListeningServer() {
+    if (this.listening) return;
+    this.primeSpeech(); // iOS gesture requirement
+    if (this.session) this.session.submit = false;
+    const session = (this.session = { submit: true });
+
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      if (this.session === session) this.session = null;
+      this.addBotMessage('CO-PILOT', "Mic access was blocked — type below and I'll still answer.");
+      return;
+    }
+
+    // Prefer webm/opus (verified against the worker); iPad Safari falls
+    // back to its default (audio/mp4), which Whisper decodes server-side.
+    const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find((t) => {
+      try {
+        return window.MediaRecorder.isTypeSupported(t);
+      } catch {
+        return false;
+      }
+    });
+
+    const recorder = new window.MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    const chunks = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size) chunks.push(e.data);
+    };
+
+    this.serverRecorder = { recorder, stream, session, chunks };
+    recorder.start();
+    this.listening = true;
+    this.pttButton.classList.add('sr-listening');
+    this.pttButton.textContent = '🎙 RECORDING…';
+    this.drawWaveform(true);
+
+    // Hard cap: MediaRecorder never auto-stops on silence.
+    this.serverStopTimer = setTimeout(() => this.stopListeningServer(), STT_MAX_MS);
+  }
+
+  async stopListeningServer() {
+    const active = this.serverRecorder;
+    clearTimeout(this.serverStopTimer);
+    this.serverStopTimer = null;
+    this.serverRecorder = null;
+    if (!active) return;
+
+    const { recorder, stream, session } = active;
+    const stopped = new Promise((resolve) => {
+      if (recorder.state === 'inactive') return resolve();
+      recorder.addEventListener('stop', resolve, { once: true });
+      setTimeout(resolve, 1000); // never hang the button
+    });
+    try {
+      recorder.stop();
+    } catch {
+      /* already stopped */
+    }
+    await stopped; // wait for the final ondataavailable flush
+    stream.getTracks().forEach((t) => t.stop());
+
+    this.listening = false;
+    this.pttButton.classList.remove('sr-listening');
+    if (this.session === session) this.session = null;
+
+    const blob = new Blob(active.chunks, { type: recorder.mimeType || 'audio/webm' });
+    if (!session.submit || blob.size === 0) {
+      this.pttButton.textContent = '🎙 HOLD TO TALK';
+      this.drawWaveform(false);
+      return;
+    }
+
+    this.pttButton.textContent = '🎙 TRANSCRIBING…';
+    try {
+      const res = await fetch(STT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': blob.type || 'audio/webm' },
+        body: blob,
+      });
+      if (!res.ok) throw new Error('stt ' + res.status);
+      const data = await res.json();
+      const transcript = ((data && data.text) || '').trim();
+      if (transcript) {
+        // Correction pass: Whisper mangles Sitka place names ("Edgecom").
+        this.handleUserInput(transcriptForRadio(transcript));
+      } else {
+        this.addBotMessage('CO-PILOT', "Didn't catch that — try again or type it below.");
+      }
+    } catch {
+      this.addBotMessage('CO-PILOT', "Voice hiccup on the server path — type it below and I'll answer.");
+    } finally {
+      this.pttButton.textContent = '🎙 HOLD TO TALK';
+      this.drawWaveform(false);
+    }
   }
 
   // ------------------------------------------------------------------
