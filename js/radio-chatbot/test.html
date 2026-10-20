@@ -136,9 +136,11 @@
 
   function updateStatus() {
     const sr = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const serverSTT = !!window.MediaRecorder;
     const tts = 'speechSynthesis' in window;
+    const voiceLabel = sr ? 'SUPPORTED' : serverSTT ? 'SERVER FALLBACK (Whisper)' : 'NOT SUPPORTED (text only)';
     statusEl.innerHTML =
-      `Voice input: <span class="${sr ? 'ok' : 'no'}">${sr ? 'SUPPORTED' : 'NOT SUPPORTED (text only)'}</span><br>` +
+      `Voice input: <span class="${sr || serverSTT ? 'ok' : 'no'}">${voiceLabel}</span><br>` +
       `Voice output: <span class="${tts ? 'ok' : 'no'}">${tts ? 'SUPPORTED' : 'NOT SUPPORTED'}</span><br>` +
       `HTTPS: <span class="ok">${location.protocol === 'https:' ? 'YES' : 'NO (mic needs HTTPS)'}</span>`;
   }
