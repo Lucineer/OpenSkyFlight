@@ -462,7 +462,13 @@ function loop(now) {
   $('aircraft').value = 'b737_800'; // the main Sitka jet
   $('weight').value = 0.85;
   $('wind').value = 5;
-  spawn();
+  try {
+    spawn();
+  } catch (err) {
+    // Never strand the player on "Loading…" — surface boot failures.
+    setBanner('<span class="bad">Boot failed: ' + (err && err.message ? err.message : err) + '</span>');
+    console.error('[real-sim] boot failed', err);
+  }
   camera.position.set(RUNWAY_M / 2 + 120, 40, 200);
   camera.lookAt(RUNWAY_M / 2, RUNWAY_Y, 0);
   requestAnimationFrame(loop);
