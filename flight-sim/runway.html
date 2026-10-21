@@ -94,6 +94,9 @@
     <button id="trim-down">TRIM −</button>
     <button id="trim-up">TRIM +</button>
   </div>
+  <div class="row">
+    <button id="pull-btn">PULL (hold)</button>
+  </div>
 </div>
 
 <div id="right-ctl">
@@ -144,6 +147,6 @@ window.addEventListener('unhandledrejection', function (e) {
   if (b) b.innerHTML = '<span class="bad">Boot failed: ' + (e.reason && e.reason.message ? e.reason.message : e.reason) + '</span>';
 });
 </script>
-<script type="module" src="js/runway/main.js?v=2"></script>
+<script type="module" src="js/runway/main.js?v=3"></script>
 </body>
 </html>
