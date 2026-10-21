@@ -2,13 +2,14 @@
 //
 // Separate page from the Phase 1 checklist sim: nothing here touches
 // index.html. State machine: spawn (hold/final) -> roll -> air -> roll
-// (landing) -> landed | overrun (splash). Physics lives in physics.js;
+// (landing) -> landed | overrun (splash) | short splash | crash | missed.
+// Physics lives in physics.js;
 // this file is input, cameras, HUD and scene glue.
 
 import * as THREE from 'three';
-import { AIRCRAFT, KT, RUNWAY_M, createState, remainingFt, step, vSpeeds } from './physics.js?v=3';
-import { buildAircraft } from './aircraft.js?v=3';
-import { RUNWAY_Y, buildPasi } from './scene.js?v=3';
+import { AIRCRAFT, KT, RUNWAY_M, createState, levelSpeedMs, remainingFt, step, vSpeeds } from './physics.js?v=4';
+import { buildAircraft } from './aircraft.js?v=4';
+import { RUNWAY_Y, buildPasi } from './scene.js?v=4';
 
 const $ = (id) => document.getElementById(id);
 const FINAL_DIST_M = 9000; // landing scenario: start of final, metres out
@@ -98,21 +99,27 @@ function spawn() {
     st.brake = true;
     st.throttle = 0;
   } else {
+    // 3° final: altitude and speed set so a -3° glide arrives at the
+    // threshold. Airspeed = level-flight speed at full flaps — faster
+    // climbs away, slower stalls on spawn (both measured in node).
+    const wKg = weightKg();
+    const wKt = -windKt(); // headwind slider is relative to runway 29; landing on 11 flips it
+    const vLevel = levelSpeedMs(ac, wKg, ac.detentMap.length - 1);
     st = createState(ac, {
-      weightKg: weightKg(),
+      weightKg: wKg,
       flapIdx: ac.detentMap.length - 1, // full flaps on final
       headingDeg: 110,
-      windKt: -windKt(), // headwind slider is relative to runway 29; landing on 11 flips it
+      windKt: wKt,
       wet: $('wet').checked,
       thresholdDistM: FINAL_DIST_M,
       runwayEndM: FINAL_DIST_M + RUNWAY_M,
     });
     st.mode = 'final';
-    st.altM = 900;
-    st.vMs = ac.kind === 'jet' ? 72 : 33;
-    st.vsMs = -4;
-    st.pitchDeg = -2;
-    st.throttle = 0.55;
+    st.altM = FINAL_DIST_M * Math.tan((3 * Math.PI) / 180);
+    st.vMs = Math.max(0, vLevel - wKt * KT); // ground speed for level airspeed
+    st.vsMs = -st.vMs * Math.tan((3 * Math.PI) / 180);
+    st.pitchDeg = -3;
+    st.throttle = 0.18;
     st.brake = false;
     st.gearDown = true;
   }
@@ -124,6 +131,8 @@ function spawn() {
   landedShown = false;
   splashShown = false;
   $('splash').hidden = true;
+  const splashH2 = document.querySelector('#splash h2');
+  if (splashH2) splashH2.textContent = '💦 Into Sitka Sound';
   $('score').hidden = true;
   placePlane();
   setBanner(
@@ -447,13 +456,31 @@ function loop(now) {
   updateCamera(fwdX, fwdZ);
   updateHud();
   updateSound();
-  if (st.overrun && !splashShown) {
+  if ((st.overrun || st.splash || st.crash || st.missed) && !splashShown) {
     splashShown = true;
     $('splash').hidden = false;
-    $('splash-msg').textContent =
-      scenario === 'takeoff'
-        ? "Off the end — you're in Sitka Sound. Rotate earlier, or lighter, or drier."
-        : "Off the far end — into the Sound. Touch down earlier, brake harder, reverse sooner.";
+    const h2 = document.querySelector('#splash h2');
+    if (st.crash) {
+      if (h2) h2.textContent = '💥 Crash';
+      $('splash-msg').textContent =
+        'You hit the ground too hard or too fast. Fly the approach, flare gently, plant it in the zone.';
+    } else if (st.missed) {
+      if (h2) h2.textContent = '↩️ Missed approach';
+      $('splash-msg').textContent =
+        'You flew past the far end still airborne. Go around: come back and fly a steeper final.';
+    } else if (st.splash && st.touchdown && st.touchdown.distM < 0) {
+      if (h2) h2.textContent = '💦 Short of the runway';
+      $('splash-msg').textContent =
+        'You touched down in Sitka Sound, short of the threshold. Carry a little more speed or a shallower glide.';
+    } else if (scenario === 'takeoff') {
+      if (h2) h2.textContent = '💦 Into Sitka Sound';
+      $('splash-msg').textContent =
+        "Off the end — you're in Sitka Sound. Rotate earlier, or lighter, or drier.";
+    } else {
+      if (h2) h2.textContent = '💦 Into Sitka Sound';
+      $('splash-msg').textContent =
+        'Off the far end — into the Sound. Touch down earlier, brake harder, reverse sooner.';
+    }
   }
   renderer.render(scene, camera);
 }
