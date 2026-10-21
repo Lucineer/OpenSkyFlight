@@ -5,6 +5,7 @@
 // on 29) is at the EAST end (+X); the 11 threshold is at the WEST end.
 // Water at both ends — the causeway is the only dry ground.
 
+import * as THREE from 'three';
 import { RUNWAY_M } from './physics.js';
 
 export const RUNWAY_Y = 7.15; // top of the runway surface
