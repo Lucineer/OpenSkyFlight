@@ -6,9 +6,9 @@
 // this file is input, cameras, HUD and scene glue.
 
 import * as THREE from 'three';
-import { AIRCRAFT, KT, RUNWAY_M, createState, remainingFt, step, vSpeeds } from './physics.js';
-import { buildAircraft } from './aircraft.js';
-import { RUNWAY_Y, buildPasi } from './scene.js';
+import { AIRCRAFT, KT, RUNWAY_M, createState, remainingFt, step, vSpeeds } from './physics.js?v=2';
+import { buildAircraft } from './aircraft.js?v=2';
+import { RUNWAY_Y, buildPasi } from './scene.js?v=2';
 
 const $ = (id) => document.getElementById(id);
 const FINAL_DIST_M = 9000; // landing scenario: start of final, metres out
