@@ -6,7 +6,7 @@
 // Water at both ends — the causeway is the only dry ground.
 
 import * as THREE from 'three';
-import { RUNWAY_M } from './physics.js?v=2';
+import { RUNWAY_M } from './physics.js?v=3';
 
 export const RUNWAY_Y = 7.15; // top of the runway surface
 
