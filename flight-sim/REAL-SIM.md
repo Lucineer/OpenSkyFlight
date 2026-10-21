@@ -13,13 +13,13 @@ Sitka Rocky Gutierrez Airport (PASI), 57.0472° N, 135.3637° W.
 Runway 11/29, water at both ends — an overrun means Sitka Sound, not grass.
 That consequence is the sim's signature tension.
 
-**Runway-length note (flagged, single constant):** the Phase 2 plan says
-6,600 ft (2,012 m). My recollection of the FAA figure is 7,200 ft
-(2,195 m). Web search was down the day this was built, so the sim ships
-with `RUNWAY_M = 2195` and this note. One confirmation check against FAA
-data, then delete this paragraph. The constant lives in
-`js/runway/physics.js` and everything (runway mesh, remaining-distance
-readout, overrun logic) derives from it, so a correction is a one-line fix.
+**Runway data (confirmed 2026-10-21, FAA via Wikipedia):** runway 11/29,
+7,200 × 150 ft (2,195 × 46 m), asphalt; elevation 26 ft / 8 m AMSL;
+57.04722° N, 135.36167° W, causeway off Japonski Island. The Phase 2
+plan's 6,600 ft was stale — a 2010 source cited 6,500 ft; the runway was
+extended since. The sim's `RUNWAY_M = 2195` is correct. True bearings are
+119°/299° (designators 11/29 are the rounded shorthand the HUD uses).
+Everything derives from the single constant in `js/runway/physics.js`.
 
 ## Slice 1 (shipped): runway start + takeoff + landing
 
@@ -60,6 +60,26 @@ technique (full throttle, flaps 15, rotate exactly at VR) — tight but
 possible. The C172 at max weight must use <25%. If a tuning change breaks
 either bound, the test fails and the change doesn't ship.
 
+## Next fleet (grounded, not yet built)
+
+- **Embraer E175** (Delta Connection seasonal) — "just fine" tier, a
+  smaller jet that fits comfortably. Good second jet after the 737s.
+- **Boeing 757-200 at reduced load** — the "barely works" challenge tier:
+  marginal at 7,200 ft at weight. The plane Magnus asked for when he said
+  "jets that it's just fine of runway for" — the 757 is the one that's
+  *just* fine, and only when light.
+- **Ilyushin Il-96 (legend unlock)** — a one-off Aeroflot widebody once
+  flew Moscow–Sitka direct. Story plane, not a workhorse.
+
+## Real Sitka hazards (gameplay backlog, all real)
+
+- Storm waves washing onto the runway; exposed high-wind location.
+- Bird flocks near the field — 2010: an Alaska 737-400 aborted takeoff
+  after an eagle strike, stopping ~3,000 ft from the end.
+- Lightning on final — Dec 2025: an Alaska 737-700 was struck on approach
+  and landed safely. Future scenario material: bird-strike engine-out,
+  wave-washed runway, crosswind gusts.
+
 ## What slice 1 deliberately leaves out
 
 ATC window, missions, career/logbook, full weather (rain/fog particles),
@@ -76,3 +96,11 @@ WebAudio hum only — no continuous audio system yet.
 5. More fleet: wheeled Beaver (short-field star), and whatever else
    Magnus asks for — each new plane must earn a performance tier, not
    just a paint job.
+
+## Slice 1 shipped (2026-10-21, overnight) — landable landings
+
+Landing scenario rebuilt: true 3° final (471 m at 9 km, level-flight
+airspeed at full flaps, throttle 0.18), with real outcomes — guided
+approaches land, fly-past = missed approach, gentle short = splash,
+stall dive / violent descent = crash. Verified in node
+(`js/runway/landing.test.js`); takeoff bounds unchanged.
