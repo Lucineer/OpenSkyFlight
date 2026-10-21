@@ -123,7 +123,7 @@ function flapAero(ac, flapDetentIdx) {
   return t;
 }
 
-// One simulation state. `mode`: 'hold' | 'roll' | 'air' | 'overrun' | 'landed' | 'splash' | 'final'
+// One simulation state. `mode`: 'hold' | 'roll' | 'air' | 'overrun' | 'landed' | 'splash' | 'final' | 'crash' | 'missed'
 export function createState(ac, opts = {}) {
   const weightKg = opts.weightKg ?? ac.mtowKg * 0.85;
   const flapIdx = opts.flapIdx ?? (ac.kind === 'jet' ? 3 : 1); // jets: flaps 15; 172: 10
@@ -169,6 +169,8 @@ export function createState(ac, opts = {}) {
     stalled: false,
     overrun: false,
     splash: false,
+    crash: false,
+    missed: false,
     touchdown: null, // { distM, sinkMs, offsetM } on landing scenario
     timeS: 0,
   };
@@ -288,13 +290,32 @@ export function step(st, dt) {
     // Touchdown (landing scenario / returning to ground).
     if (st.altM <= 0.5 && st.vsMs <= 0) {
       st.altM = 0;
-      st.mode = 'roll';
-      st.airborne = false;
+      const relM = st.distM - st.thresholdDistM; // runway-relative: <0 = short, in water
+      const sinkMs = -st.vsMs;
+      const iasKt = st.vMs / KT + st.windKt;
       if (st.touchdown === null && st.distM > 0) {
-        st.touchdown = { distM: st.distM - st.thresholdDistM, sinkMs: -st.vsMs, offsetM: 0 };
+        st.touchdown = { distM: relM, sinkMs, offsetM: 0 };
+      }
+      // L3 first: a violent impact is a crash on any surface — water at
+      // 7 m/s sink and 100+ kt is concrete, not a ditching.
+      if (sinkMs >= 6.0 || iasKt > 200) {
+        st.mode = 'crash';
+        st.crash = true;
+      // L2: gentle short of the threshold = water, not a landing.
+      } else if (relM < 0) {
+        st.mode = 'splash';
+        st.splash = true;
+      } else {
+        st.mode = 'roll';
+        st.airborne = false;
       }
       st.vsMs = 0;
       st.pitchDeg = 0;
+    }
+    // L1: missed approach — flew past the far end still airborne (landing only).
+    if (st.mode === 'final' && st.distM > st.runwayEndM) {
+      st.mode = 'missed';
+      st.missed = true;
     }
     return;
   }
@@ -327,4 +348,13 @@ export function simulateTakeoff(ac, opts = {}) {
 // Runway remaining in feet from current position.
 export function remainingFt(st) {
   return Math.max(0, (st.runwayEndM - st.distM) * 3.28084);
+}
+
+// Level-flight speed at given flaps: where lift equals weight. Used for
+// landing spawns so a final starts at a flyable speed, not above it
+// (which climbs away) or below it (which stalls on spawn).
+export function levelSpeedMs(ac, weightKg, flapIdx) {
+  const flap = flapAero(ac, flapIdx);
+  const cl = 0.9 + flap.cl * 0.6;
+  return Math.sqrt((2 * weightKg * 9.81) / (RHO * ac.wingM2 * cl));
 }
