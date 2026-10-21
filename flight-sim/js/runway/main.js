@@ -453,10 +453,10 @@ function loop(now) {
 
 // Boot: build the UI selects, spawn on the runway, run.
 (function boot() {
-  for (const [id, name] of Object.entries(AIRCRAFT)) {
+  for (const [id, ac] of Object.entries(AIRCRAFT)) {
     const o = document.createElement('option');
     o.value = id;
-    o.textContent = name;
+    o.textContent = ac.name; // AIRCRAFT values are objects, not labels
     $('aircraft').appendChild(o);
   }
   $('aircraft').value = 'b737_800'; // the main Sitka jet
