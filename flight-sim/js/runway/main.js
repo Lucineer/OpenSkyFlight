@@ -6,9 +6,9 @@
 // this file is input, cameras, HUD and scene glue.
 
 import * as THREE from 'three';
-import { AIRCRAFT, KT, RUNWAY_M, createState, remainingFt, step, vSpeeds } from './physics.js?v=2';
-import { buildAircraft } from './aircraft.js?v=2';
-import { RUNWAY_Y, buildPasi } from './scene.js?v=2';
+import { AIRCRAFT, KT, RUNWAY_M, createState, remainingFt, step, vSpeeds } from './physics.js?v=3';
+import { buildAircraft } from './aircraft.js?v=3';
+import { RUNWAY_Y, buildPasi } from './scene.js?v=3';
 
 const $ = (id) => document.getElementById(id);
 const FINAL_DIST_M = 9000; // landing scenario: start of final, metres out
@@ -157,6 +157,7 @@ $('lever-track').addEventListener('pointermove', (e) => {
 $('lever-track').addEventListener('pointerup', () => (leverDrag = false));
 
 let yokeDrag = false;
+let pullHeld = false; // PULL button: deterministic full elevator, no drag needed
 let yoke = { x: 0, y: 0 };
 function setYoke(clientX, clientY) {
   const r = $('yoke').getBoundingClientRect();
@@ -181,6 +182,10 @@ $('yoke').addEventListener('pointerup', () => {
   $('yoke-dot').style.left = '50%';
   $('yoke-dot').style.top = '50%';
 });
+// Fallback if pointer capture is lost (some embedded browsers): keep tracking.
+window.addEventListener('pointermove', (e) => {
+  if (yokeDrag && st) setYoke(e.clientX, e.clientY);
+});
 
 function holdButton(el, on, off) {
   el.addEventListener('pointerdown', () => {
@@ -193,6 +198,7 @@ function holdButton(el, on, off) {
   el.addEventListener('pointercancel', end);
   el.addEventListener('pointerleave', end);
 }
+holdButton($('pull-btn'), () => (pullHeld = true), () => (pullHeld = false));
 holdButton($('rudder-l'), () => (st.rudder = -1), () => (st.rudder = 0));
 holdButton($('rudder-r'), () => (st.rudder = 1), () => (st.rudder = 0));
 holdButton($('rev-btn'), () => (st.reverse = true), () => (st.reverse = false));
@@ -278,6 +284,7 @@ function applyKeys() {
     st.elevator = yoke.y;
     st.aileron = yoke.x;
   }
+  if (pullHeld) st.elevator = 1; // PULL button overrides drag/keys
   if (keys['r']) st.reverse = true;
   else if (!document.querySelector('#rev-btn:active')) st.reverse = false;
   $('lever-thumb').style.bottom = `${st.throttle * 100}%`;
