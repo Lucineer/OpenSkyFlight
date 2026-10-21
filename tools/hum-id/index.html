@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Hum ID — prototype</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; font-family: -apple-system, system-ui, sans-serif;
+    background: #101418; color: #eef2f6; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; padding: 20px 16px 40px;
+  }
+  h1 { font-size: 22px; margin: 6px 0 2px; }
+  .sub { color: #8b95a1; font-size: 14px; margin-bottom: 14px; text-align: center; max-width: 560px; }
+  #humBtn {
+    width: 200px; height: 200px; border-radius: 50%; border: none; cursor: pointer;
+    font-size: 20px; font-weight: 700; color: #fff;
+    background: radial-gradient(circle at 35% 30%, #4da3ff, #1668dc 70%);
+    box-shadow: 0 8px 30px rgba(40,120,255,.35);
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    transition: transform .08s;
+  }
+  #humBtn.recording { background: radial-gradient(circle at 35% 30%, #ff6b6b, #d92b2b 70%); transform: scale(.94); }
+  #humBtn:disabled { opacity: .4; }
+  #status { margin: 14px 0 6px; min-height: 24px; font-size: 16px; color: #c7d0da; text-align: center; }
+  #canvas {
+    width: 100%; max-width: 640px; height: 220px; background: #0a0d11;
+    border: 1px solid #232b34; border-radius: 12px; margin-top: 8px;
+  }
+  .row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; justify-content: center; }
+  button.action {
+    min-height: 48px; padding: 12px 20px; font-size: 16px; border-radius: 12px;
+    border: 1px solid #2c3642; background: #1a2129; color: #eef2f6; cursor: pointer;
+  }
+  button.action:disabled { opacity: .35; }
+  #notes { margin-top: 14px; font-size: 18px; letter-spacing: 1px; text-align: center; min-height: 28px; }
+  #match {
+    margin-top: 10px; padding: 14px 18px; border-radius: 12px; background: #16202b;
+    border: 1px solid #2c3642; font-size: 17px; text-align: center; max-width: 640px; display: none;
+  }
+  #match .title { font-size: 22px; font-weight: 700; color: #7dffa8; }
+  #match .conf { color: #8b95a1; font-size: 13px; margin-top: 4px; }
+  .hint { margin-top: 18px; color: #8b95a1; font-size: 13px; text-align: center; max-width: 560px; line-height: 1.5; }
+  .hint b { color: #c7d0da; }
+</style>
+</head>
+<body>
+  <h1>🎵 Hum ID</h1>
+  <div class="sub">Hold the button, hum a tune, let go. Everything runs on this device — nothing is uploaded.</div>
+  <button id="humBtn">HOLD<br>TO HUM</button>
+  <div id="status">Tap and hold to start</div>
+  <canvas id="canvas" width="640" height="220"></canvas>
+  <div id="notes"></div>
+  <div id="match"></div>
+  <div class="row">
+    <button class="action" id="playRec" disabled>▶ Play my hum</button>
+    <button class="action" id="playHeard" disabled>♪ Play what it heard</button>
+  </div>
+  <div class="hint">
+    <b>Demo build:</b> it only knows 3 tunes so far — try humming
+    <b>Twinkle Twinkle</b>, <b>Mary Had a Little Lamb</b>, or <b>Ode to Joy</b>.<br>
+    Knowing <i>any</i> song needs a real melody database — the plan is ACRCloud's
+    humming engine (they have a 14-day free trial). This page proves the hard
+    half already works: mic → pitch contour, right here on your iPad.
+  </div>
+
+<script src="pitch.js"></script>
+<script>
+(function () {
+  'use strict';
+  var humBtn = document.getElementById('humBtn');
+  var statusEl = document.getElementById('status');
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var notesEl = document.getElementById('notes');
+  var matchEl = document.getElementById('match');
+  var playRec = document.getElementById('playRec');
+  var playHeard = document.getElementById('playHeard');
+
+  var stream = null, audioCtx = null, mediaRecorder = null, chunks = [];
+  var analyser = null, rafId = 0, recStart = 0, stopTimer = 0;
+  var lastBuffer = null, lastResult = null, busy = false;
+
+  function status(t) { statusEl.textContent = t; }
+
+  function drawWave() {
+    var data = new Uint8Array(analyser.fftSize);
+    function frame() {
+      analyser.getByteTimeDomainData(data);
+      ctx.fillStyle = '#0a0d11';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#4da3ff'; ctx.lineWidth = 2; ctx.beginPath();
+      var step = canvas.width / data.length;
+      for (var i = 0; i < data.length; i++) {
+        var y = (data[i] / 255) * canvas.height;
+        if (i === 0) ctx.moveTo(0, y); else ctx.lineTo(i * step, y);
+      }
+      ctx.stroke();
+      rafId = requestAnimationFrame(frame);
+    }
+    frame();
+  }
+
+  function drawContour(res) {
+    var track = res.track;
+    var voiced = track.filter(function (f) { return f > 0; });
+    if (!voiced.length) return;
+    var midis = voiced.map(function (f) { return 69 + 12 * Math.log(f / 440) / Math.LN2; });
+    var lo = Math.min.apply(null, midis) - 2, hi = Math.max.apply(null, midis) + 2;
+    ctx.fillStyle = '#0a0d11';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // gridlines per semitone
+    ctx.strokeStyle = '#1a2129'; ctx.lineWidth = 1;
+    for (var m = Math.ceil(lo); m <= hi; m++) {
+      var gy = canvas.height - ((m - lo) / (hi - lo)) * canvas.height;
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(canvas.width, gy); ctx.stroke();
+    }
+    ctx.strokeStyle = '#7dffa8'; ctx.lineWidth = 2.5; ctx.beginPath();
+    var started = false;
+    for (var i = 0; i < track.length; i++) {
+      if (track[i] <= 0) { started = false; continue; }
+      var mm = 69 + 12 * Math.log(track[i] / 440) / Math.LN2;
+      var x = (i / (track.length - 1)) * canvas.width;
+      var y = canvas.height - ((mm - lo) / (hi - lo)) * canvas.height;
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  async function start() {
+    if (busy) return;
+    busy = true;
+    humBtn.disabled = false;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+      });
+    } catch (e) {
+      status('Mic blocked — allow microphone access in Settings → Safari, then try again.');
+      busy = false;
+      return;
+    }
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+      var src = audioCtx.createMediaStreamSource(stream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      src.connect(analyser);
+      mediaRecorder = new MediaRecorder(stream);
+      chunks = [];
+      mediaRecorder.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      mediaRecorder.onstop = onStopped;
+      mediaRecorder.start();
+      recStart = Date.now();
+      humBtn.classList.add('recording');
+      humBtn.innerHTML = 'HUMMING…<br>RELEASE TO STOP';
+      status('Listening… hum your tune');
+      matchEl.style.display = 'none';
+      notesEl.textContent = '';
+      playRec.disabled = true; playHeard.disabled = true;
+      drawWave();
+      stopTimer = setTimeout(stop, 12000); // 12s cap
+    } catch (e) {
+      status('Could not start recording: ' + e.message);
+      cleanup();
+    }
+  }
+
+  function stop() {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+    clearTimeout(stopTimer);
+    cancelAnimationFrame(rafId);
+    status('Thinking…');
+    mediaRecorder.stop();
+  }
+
+  function cleanup() {
+    humBtn.classList.remove('recording');
+    humBtn.innerHTML = 'HOLD<br>TO HUM';
+    if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    busy = false;
+  }
+
+  async function onStopped() {
+    var dur = (Date.now() - recStart) / 1000;
+    cleanup();
+    if (dur < 1) { status('Too short — hold the button and hum a few notes.'); return; }
+    try {
+      var blob = new Blob(chunks, { type: (mediaRecorder && mediaRecorder.mimeType) || 'audio/webm' });
+      var ab = await blob.arrayBuffer();
+      var audioBuf = await audioCtx.decodeAudioData(ab);
+      var pcm = audioBuf.getChannelData(0);
+      var t0 = performance.now();
+      var res = HumPitch.analyze(pcm, audioBuf.sampleRate);
+      var ms = Math.round(performance.now() - t0);
+      lastBuffer = audioBuf; lastResult = res;
+      drawContour(res);
+      if (!res.notes.length) {
+        status('Heard ' + dur.toFixed(1) + 's but found no clear pitch — try humming louder, closer to the mic.');
+        return;
+      }
+      notesEl.textContent = 'Heard: ' + res.noteNames.join(' – ');
+      status('Analyzed ' + dur.toFixed(1) + 's of audio in ' + ms + 'ms, on-device.');
+      if (res.match && res.match.dist < 0.6) {
+        var conf = Math.max(1, Math.round((1 - res.match.dist) * 100));
+        matchEl.innerHTML = '<div>That sounds like…</div><div class="title">' +
+          escapeHtml(res.match.title) + '</div><div class="conf">confidence ' + conf +
+          '% · demo database (3 tunes)</div>';
+      } else {
+        matchEl.innerHTML = '<div>Heard <b>' + escapeHtml(res.noteNames.join(' – ')) +
+          '</b> — not one of the 3 demo tunes.<br><span class="conf">The full song database is the ACRCloud step.</span></div>';
+      }
+      matchEl.style.display = 'block';
+      playRec.disabled = false; playHeard.disabled = false;
+    } catch (e) {
+      status('Hmm, that recording did not decode: ' + e.message);
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  playRec.onclick = function () {
+    if (!lastBuffer || !audioCtx) return;
+    var src = audioCtx.createBufferSource();
+    src.buffer = lastBuffer;
+    src.connect(audioCtx.destination);
+    src.start();
+  };
+
+  playHeard.onclick = function () {
+    if (!lastResult || !audioCtx) return;
+    var t = audioCtx.currentTime + 0.05;
+    lastResult.runs.forEach(function (r) {
+      var f = 440 * Math.pow(2, (r.m - 69) / 12);
+      var dur = r.n * lastResult.frameSec;
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.5, t + 0.02);
+      g.gain.setValueAtTime(0.5, t + Math.max(0.02, dur - 0.03));
+      g.gain.linearRampToValueAtTime(0, t + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t + dur + 0.05);
+      t += dur + 0.03;
+    });
+  };
+
+  humBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); start(); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) {
+    humBtn.addEventListener(ev, function (e) { e.preventDefault(); stop(); });
+  });
+  humBtn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+})();
+</script>
+</body>
+</html>
