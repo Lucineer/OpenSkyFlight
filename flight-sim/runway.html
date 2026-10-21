@@ -132,6 +132,18 @@
   <button onclick="document.getElementById('spawn-btn').click()">RESET ON RUNWAY</button>
 </div>
 
-<script type="module" src="js/runway/main.js"></script>
+<script>
+// Surface boot failures in the banner: module top-level errors (scene build,
+// WebGL) would otherwise strand the page on "Loading…" with no clue.
+window.addEventListener('error', function (e) {
+  var b = document.getElementById('banner');
+  if (b) b.innerHTML = '<span class="bad">Boot failed: ' + (e.message || 'unknown error') + '</span>';
+});
+window.addEventListener('unhandledrejection', function (e) {
+  var b = document.getElementById('banner');
+  if (b) b.innerHTML = '<span class="bad">Boot failed: ' + (e.reason && e.reason.message ? e.reason.message : e.reason) + '</span>';
+});
+</script>
+<script type="module" src="js/runway/main.js?v=2"></script>
 </body>
 </html>
