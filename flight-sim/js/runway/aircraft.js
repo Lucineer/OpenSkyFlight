@@ -4,6 +4,8 @@
 // at the aircraft centre, y = 0 at ground contact (gear extended).
 // Materials are MeshLambertMaterial — cheap, no shadows.
 
+import * as THREE from 'three';
+
 function mat(color) {
   return new THREE.MeshLambertMaterial({ color });
 }
