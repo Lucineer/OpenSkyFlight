@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0a1628" />
+<title>Sitka Real Sim — Runway Start</title>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.183.0/build/three.module.js" } }
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: #0a1628; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #fff; }
+  #scene { position: fixed; inset: 0; }
+  #scene canvas { display: block; }
+  .panel { background: rgba(8, 20, 36, 0.78); border: 1px solid rgba(125, 249, 255, 0.25); border-radius: 12px; backdrop-filter: blur(4px); }
+  button, select, input { font-size: 15px; }
+  button { min-height: 44px; min-width: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.12); color: #fff; cursor: pointer; }
+  button:active { background: rgba(125, 249, 255, 0.35); }
+  select { min-height: 44px; border-radius: 10px; background: #12263f; color: #fff; border: 1px solid rgba(255,255,255,0.25); padding: 0 8px; max-width: 100%; }
+  input[type="range"] { width: 130px; accent-color: #7df9ff; }
+  input[type="checkbox"] { width: 22px; height: 22px; accent-color: #7df9ff; }
+  /* Top setup bar */
+  #setup { position: fixed; top: max(8px, env(safe-area-inset-top)); left: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; z-index: 10; }
+  #setup h1 { font-size: 16px; letter-spacing: 0.5px; margin-right: 4px; }
+  #setup label { font-size: 12px; opacity: 0.85; display: flex; align-items: center; gap: 6px; }
+  #spawn-btn { background: #0e7c86; border-color: #7df9ff; font-weight: 700; }
+  /* HUD strip */
+  #hud { position: fixed; left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 12px; z-index: 10; font-variant-numeric: tabular-nums; }
+  #hud b { font-size: 17px; }
+  #hud span { font-size: 11px; opacity: 0.75; display: block; }
+  #hud .cell { min-width: 62px; }
+  .ok { color: #7dff8a; } .warn { color: #ffcf4d; } .bad { color: #ff5a4d; }
+  #banner { position: fixed; left: 50%; transform: translateX(-50%); top: 76px; padding: 8px 14px; z-index: 10; font-size: 15px; text-align: center; max-width: 94vw; }
+  #score { position: fixed; left: 50%; transform: translateX(-50%); top: 128px; padding: 10px 16px; z-index: 10; font-size: 15px; text-align: center; max-width: 94vw; }
+  /* Left: yoke + rudder + trim */
+  #left-ctl { position: fixed; left: 8px; bottom: 118px; display: flex; flex-direction: column; gap: 8px; z-index: 10; align-items: center; }
+  #yoke { width: 150px; height: 150px; border-radius: 16px; position: relative; touch-action: none; }
+  #yoke-dot { position: absolute; width: 26px; height: 26px; border-radius: 50%; background: #7df9ff; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+  #yoke-label { position: absolute; bottom: 6px; width: 100%; text-align: center; font-size: 11px; opacity: 0.7; }
+  .row { display: flex; gap: 8px; }
+  /* Right: throttle lever + systems */
+  #right-ctl { position: fixed; right: 8px; bottom: 118px; display: flex; gap: 10px; z-index: 10; align-items: flex-end; }
+  #lever-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; }
+  #lever-track { width: 54px; height: 180px; border-radius: 10px; background: rgba(255,255,255,0.12); position: relative; touch-action: none; }
+  #lever-thumb { position: absolute; left: 4px; right: 4px; height: 26px; border-radius: 8px; background: #7df9ff; bottom: 0%; }
+  #lever-label { font-size: 11px; opacity: 0.75; }
+  #sys-btns { display: flex; flex-direction: column; gap: 8px; }
+  #sys-btns button { width: 118px; font-size: 14px; }
+  /* Splash overlay */
+  #splash { position: fixed; inset: 0; background: rgba(4, 20, 40, 0.82); z-index: 30; display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+  #splash[hidden] { display: none; }
+  #splash h2 { font-size: 26px; }
+  #splash p { font-size: 17px; max-width: 420px; line-height: 1.5; }
+  #splash button { background: #0e7c86; font-size: 18px; padding: 12px 24px; }
+  #keys { position: fixed; right: 8px; top: 76px; padding: 8px 10px; font-size: 11px; opacity: 0.8; z-index: 9; line-height: 1.6; }
+  @media (max-width: 700px) { #keys { display: none; } #setup h1 { display: none; } }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+
+<div id="setup" class="panel">
+  <h1>🛫 Sitka Real Sim</h1>
+  <select id="scenario" aria-label="Scenario">
+    <option value="takeoff">Takeoff — runway 29</option>
+    <option value="landing">Landing — runway 11</option>
+  </select>
+  <select id="aircraft" aria-label="Aircraft"></select>
+  <label>Load <input id="weight" type="range" min="0.35" max="1" step="0.05" value="0.85" /></label>
+  <label>Wind <input id="wind" type="range" min="-20" max="20" step="1" value="5" /> kt</label>
+  <label><input id="wet" type="checkbox" /> Wet runway</label>
+  <button id="spawn-btn">SET ON RUNWAY</button>
+  <button id="cam-btn">CAM: CHASE</button>
+  <button id="sound-btn">SOUND ON</button>
+</div>
+
+<div id="banner" class="panel">Loading…</div>
+<div id="score" class="panel" hidden></div>
+
+<div id="left-ctl">
+  <div id="yoke" class="panel">
+    <div id="yoke-dot"></div>
+    <div id="yoke-label">YOKE — drag to pitch / roll</div>
+  </div>
+  <div class="row">
+    <button id="rudder-l">◀ RUDDER</button>
+    <button id="rudder-r">RUDDER ▶</button>
+  </div>
+  <div class="row">
+    <button id="trim-down">TRIM −</button>
+    <button id="trim-up">TRIM +</button>
+  </div>
+</div>
+
+<div id="right-ctl">
+  <div id="lever-wrap" class="panel">
+    <div id="lever-track"><div id="lever-thumb"></div></div>
+    <div id="lever-label">THROTTLE <span id="thr-val">0%</span></div>
+  </div>
+  <div id="sys-btns">
+    <button id="flap-btn">FLAPS 15</button>
+    <button id="gear-btn">GEAR DOWN</button>
+    <button id="brake-btn">BRAKE SET</button>
+    <button id="spd-btn">SPDBRK</button>
+    <button id="rev-btn">REVERSE (hold)</button>
+  </div>
+</div>
+
+<div id="hud" class="panel">
+  <div class="cell"><b id="hud-ias">0 kt</b><span>AIRSPEED</span></div>
+  <div class="cell"><b id="hud-alt">0 ft</b><span>ALTITUDE</span></div>
+  <div class="cell"><b id="hud-vsi">0 fpm</b><span>VERT SPEED</span></div>
+  <div class="cell"><b id="hud-hdg">290°</b><span>HEADING</span></div>
+  <div class="cell"><b id="hud-n1">0%</b><span>THRUST</span></div>
+  <div class="cell"><b>FLAPS <span id="hud-flap">15</span></b><span>DETENT</span></div>
+  <div class="cell"><b id="hud-gear">DOWN</b><span>GEAR</span></div>
+  <div class="cell"><b>V1 <span id="hud-v1">–</span> VR <span id="hud-vr">–</span> V2 <span id="hud-v2">–</span></b><span>V-SPEEDS (kt)</span></div>
+  <div class="cell"><b id="hud-rwy">–</b><span>RUNWAY LEFT</span></div>
+  <div class="cell"><b id="hud-weight">–</b><span>WEIGHT</span></div>
+  <div class="cell"><b id="hud-wind">–</b><span>WIND / RWY</span></div>
+</div>
+
+<div id="keys" class="panel">Keys: W/S throttle · arrows yoke · Q/E rudder · F flaps · G gear · P brake · B speedbrake · R reverse · C camera</div>
+
+<div id="splash" hidden>
+  <h2>💦 Into Sitka Sound</h2>
+  <p id="splash-msg"></p>
+  <button onclick="document.getElementById('spawn-btn').click()">RESET ON RUNWAY</button>
+</div>
+
+<script type="module" src="js/runway/main.js"></script>
+</body>
+</html>
